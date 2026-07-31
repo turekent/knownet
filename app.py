@@ -218,6 +218,14 @@ def check_lang_switch():
         session["lang"] = lang_param
         return redirect(url_for(request.endpoint or "index"))
 
+def _T(key, *args):
+    """Get translated string for current session language"""
+    lang = session.get("lang", "en")
+    s = LANG.get(lang, LANG["en"]).get(key, key)
+    if args:
+        s = s.format(*args)
+    return s
+
 # ==================== Auth ====================
 
 def hash_password(pwd):
@@ -524,7 +532,7 @@ def login_page():
         username = request.form.get("username", "").strip()
         pwd = request.form.get("password", "")
         if not username:
-            return render_template("login.html", error="请输入用户名")
+            return render_template("login.html", error=_T("err_empty_username"))
 
         admin_db = get_admin_db()
         user = admin_db.execute(
@@ -542,7 +550,7 @@ def login_page():
                 return redirect(url_for("admin_panel"))
             return redirect(url_for("index"))
 
-        return render_template("login.html", error="用户名或密码错误")
+        return render_template("login.html", error=_T("err_login"))
 
     return render_template("login.html")
 
@@ -560,22 +568,22 @@ def register_page():
 
         # 前端校验的二次确认（防绕过）
         if not username or len(username) < 2:
-            return render_template("register.html", error="用户名至少2个字符")
+            return render_template("register.html", error=_T("err_username_short"))
         if len(username) > 20:
-            return render_template("register.html", error="用户名最多20个字符")
+            return render_template("register.html", error=_T("err_username_long"))
         if not re.match(r'^[a-zA-Z0-9_\u4e00-\u9fff]+$', username):
-            return render_template("register.html", error="用户名只能包含中英文、数字和下划线")
+            return render_template("register.html", error=_T("err_username_chars"))
         if len(pwd) < 6 or len(pwd) > 16:
-            return render_template("register.html", error="密码需要6-16位")
+            return render_template("register.html", error=_T("err_password_length"))
         if not re.search(r'[a-zA-Z]', pwd) or not re.search(r'[0-9]', pwd):
-            return render_template("register.html", error="密码需包含字母和数字")
+            return render_template("register.html", error=_T("err_password_complex"))
         if pwd != pwd2:
-            return render_template("register.html", error="两次密码不一致")
+            return render_template("register.html", error=_T("err_password_mismatch"))
 
         admin_db = get_admin_db()
         exists = admin_db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
         if exists:
-            return render_template("register.html", error="用户名已存在")
+            return render_template("register.html", error=_T("err_user_exists"))
 
         admin_db.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
                         (username, hash_password(pwd)))
