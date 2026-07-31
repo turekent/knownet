@@ -8,3 +8,4 @@ static/uploads/*
 .env
 .ds_key
 *.log
+drafts/
