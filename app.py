@@ -107,7 +107,7 @@ LANG = {
         "err_user_exists": "用户名已存在",
         "err_login": "用户名或密码错误",
         "err_empty_username": "请输入用户名",
-        "switch_lang": "中文",
+        "switch_lang": "English",
     },
     "en": {
         "app_title": "KnowNet",
@@ -196,12 +196,11 @@ LANG = {
 
 @app.context_processor
 def inject_lang():
-    lang = session.get("lang", "")
+    lang = session.get("lang", "en")
+    # Default to English; user can switch via ?lang=zh or toggle button
     if not lang:
-        # Auto-detect from browser
-        al = request.headers.get("Accept-Language", "")
-        lang = "zh" if al.lower().startswith("zh") else "en"
-        session["lang"] = lang
+        lang = "en"
+    session["lang"] = lang
 
     def T(key, *args):
         s = LANG.get(lang, LANG["en"]).get(key, key)
