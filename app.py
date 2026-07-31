@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """人脉知识图谱 - 手机端 AI 驱动个人关系管理"""
 import os, json, uuid, base64, datetime, sqlite3, re, urllib.request
-from flask import Flask, request, jsonify, render_template, g, session
+from functools import wraps
+from flask import Flask, request, jsonify, render_template, g, session, redirect, url_for
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(APP_ROOT, "knownet.db")
@@ -16,6 +17,19 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # API Keys
 DS_KEY_PATH = "/home/ubuntu/.ds_key"
 ZHIPU_KEY = "REDACTED"
+
+# Auth
+KNOWNET_PASSWORD = os.environ.get("KNOWNET_PASSWORD", "REDACTED")
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("authenticated"):
+            if request.is_json or request.path.startswith("/api/"):
+                return jsonify({"code": 401, "msg": "请先登录"}), 401
+            return redirect(url_for("login_page"))
+        return f(*args, **kwargs)
+    return decorated
 
 def get_db():
     if "db" not in g:
@@ -230,10 +244,27 @@ def auto_link_by_tags(person_id):
 # ==================== API ====================
 
 @app.route("/")
+@login_required
 def index():
     return render_template("index.html")
 
+@app.route("/login", methods=["GET", "POST"])
+def login_page():
+    if request.method == "POST":
+        pwd = request.form.get("password", "")
+        if pwd == KNOWNET_PASSWORD:
+            session["authenticated"] = True
+            return redirect(url_for("index"))
+        return render_template("login.html", error="密码错误")
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login_page"))
+
 @app.route("/api/persons", methods=["GET"])
+@login_required
 def api_persons():
     search = request.args.get("q", "").strip()
     db = get_db()
@@ -261,6 +292,7 @@ def api_persons():
     return jsonify({"code": 0, "data": result})
 
 @app.route("/api/person/<int:pid>", methods=["GET"])
+@login_required
 def api_person_detail(pid):
     db = get_db()
     r = db.execute("SELECT * FROM persons WHERE id=?", (pid,)).fetchone()
@@ -288,6 +320,7 @@ def api_person_detail(pid):
     return jsonify({"code": 0, "data": person})
 
 @app.route("/api/person", methods=["POST"])
+@login_required
 def api_person_add():
     """添加人物：支持图片上传或纯文本"""
     text = request.form.get("text", "").strip()
@@ -312,6 +345,7 @@ def api_person_add():
     return jsonify({"code": 0, "msg": "已添加并自动关联", "data": {"id": pid}})
 
 @app.route("/api/search/tag", methods=["GET"])
+@login_required
 def api_search_tag():
     """按标签搜索"""
     tag_name = request.args.get("name", "").strip()
@@ -331,6 +365,7 @@ def api_search_tag():
     return jsonify({"code": 0, "data": [dict(v) for v in values]})
 
 @app.route("/api/search/tag/<tag_name>/<path:tag_value>", methods=["GET"])
+@login_required
 def api_tag_persons(tag_name, tag_value):
     """获取某个标签下的所有人"""
     db = get_db()
@@ -352,6 +387,7 @@ def api_tag_persons(tag_name, tag_value):
     return jsonify({"code": 0, "data": result})
 
 @app.route("/api/path/<int:a>/<int:b>", methods=["GET"])
+@login_required
 def api_find_path(a, b):
     """BFS 找两个人之间的最短关系路径（六度人脉）"""
     db = get_db()
