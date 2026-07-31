@@ -356,6 +356,47 @@ def logout():
     session.clear()
     return redirect(url_for("login_page"))
 
+@app.route("/register", methods=["GET", "POST"])
+def register_page():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        pwd = request.form.get("password", "")
+        pwd2 = request.form.get("password2", "")
+
+        # 前端校验的二次确认（防绕过）
+        if not username or len(username) < 2:
+            return render_template("register.html", error="用户名至少2个字符")
+        if len(username) > 20:
+            return render_template("register.html", error="用户名最多20个字符")
+        if not re.match(r'^[a-zA-Z0-9_\u4e00-\u9fff]+$', username):
+            return render_template("register.html", error="用户名只能包含中英文、数字和下划线")
+        if len(pwd) < 6 or len(pwd) > 16:
+            return render_template("register.html", error="密码需要6-16位")
+        if not re.search(r'[a-zA-Z]', pwd) or not re.search(r'[0-9]', pwd):
+            return render_template("register.html", error="密码需包含字母和数字")
+        if pwd != pwd2:
+            return render_template("register.html", error="两次密码不一致")
+
+        admin_db = get_admin_db()
+        exists = admin_db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+        if exists:
+            return render_template("register.html", error="用户名已存在")
+
+        admin_db.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                        (username, hash_password(pwd)))
+        admin_db.commit()
+
+        uid = admin_db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()["id"]
+        session["user_id"] = uid
+        session["username"] = username
+        session["is_admin"] = False
+        admin_db.execute("UPDATE users SET last_login=CURRENT_TIMESTAMP WHERE id=?", (uid,))
+        admin_db.commit()
+
+        return redirect(url_for("index"))
+
+    return render_template("register.html")
+
 # ==================== User API ====================
 
 @app.route("/api/persons", methods=["GET"])
