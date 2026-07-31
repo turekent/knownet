@@ -1,0 +1,10 @@
+# KnowNet
+__pycache__/
+*.pyc
+*.pyo
+knownet.db
+static/uploads/*
+!static/uploads/.gitkeep
+.env
+.ds_key
+*.log

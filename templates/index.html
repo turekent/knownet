@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>人脉 · 知识图谱</title>
+<style>
+:root{--bg:#F8F9FB;--card:#fff;--ink:#1a1a2e;--soft:#6b7280;--accent:#4F46E5;--tag:#EEF2FF;--tag-text:#4338CA;--green:#059669;--red:#DC2626;--border:#e5e7eb;--radius:14px;--shadow:0 2px 12px rgba(0,0,0,.06)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;-webkit-tap-highlight-color:transparent}
+.app{max-width:480px;margin:0 auto;padding:16px}
+
+/* Header */
+.header{padding:12px 0;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.header .count{font-size:12px;color:var(--soft);background:var(--card);padding:4px 10px;border-radius:20px}
+
+/* Search */
+.search-bar{display:flex;gap:8px;margin-bottom:12px}
+.search-bar input{flex:1;padding:12px 16px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:15px;background:var(--card);outline:none;transition:border-color .2s}
+.search-bar input:focus{border-color:var(--accent)}
+.search-bar button{padding:12px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;white-space:nowrap}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:12px;background:var(--card);border-radius:var(--radius);padding:4px}
+.tab{flex:1;text-align:center;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;color:var(--soft);transition:.2s}
+.tab.active{background:var(--accent);color:#fff}
+
+/* Cards */
+.card{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:8px;box-shadow:var(--shadow);cursor:pointer;transition:transform .1s}
+.card:active{transform:scale(.98)}
+.card .c-name{font-size:16px;font-weight:700;margin-bottom:4px}
+.card .c-info{font-size:12px;color:var(--soft);margin-bottom:6px;line-height:1.5}
+.card .c-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.tag{font-size:11px;padding:3px 8px;border-radius:6px;background:var(--tag);color:var(--tag-text);font-weight:500}
+.tag.hometown{background:#FEF3C7;color:#92400E}
+.tag.school{background:#DBEAFE;color:#1E40AF}
+.tag.interest{background:#D1FAE5;color:#065F46}
+.tag.company{background:#F3E8FF;color:#6B21A8}
+
+/* Modal */
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:100;align-items:flex-end;justify-content:center}
+.modal.show{display:flex}
+.modal-box{background:#fff;width:100%;max-width:480px;max-height:90vh;border-radius:20px 20px 0 0;padding:20px;overflow-y:auto}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modal-head h3{font-size:18px;font-weight:700}
+.modal-head .x{font-size:24px;background:none;border:none;cursor:pointer;color:var(--soft);padding:4px 8px}
+.fg{margin-bottom:12px}
+.fg label{display:block;font-size:12px;color:var(--soft);margin-bottom:4px;font-weight:600}
+.fg input,.fg textarea,.fg select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:none;font-family:inherit}
+.fg textarea{min-height:80px;resize:vertical}
+.btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer}
+.btn:active{opacity:.8}
+.btn-sec{background:var(--bg);color:var(--ink);border:1.5px solid var(--border)}
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:24px;text-align:center;cursor:pointer;margin-bottom:12px;transition:.2s}
+.upload-zone:active{background:var(--bg)}
+.upload-zone .icon{font-size:32px;margin-bottom:6px}
+.upload-zone .hint{font-size:12px;color:var(--soft)}
+.upload-zone img{max-width:100%;max-height:200px;border-radius:8px;margin-top:8px}
+.preview-img{max-width:100%;border-radius:8px;margin-top:8px}
+
+/* Toast */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:10px 24px;border-radius:20px;font-size:14px;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* Path */
+.path-step{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)}
+.path-step:last-child{border:none}
+.path-arrow{color:var(--accent);font-weight:700;font-size:18px}
+.path-person{flex:1}
+.path-person .name{font-weight:700;font-size:14px}
+.path-person .shared{font-size:11px;color:var(--green);margin-top:2px}
+.path-depth{background:var(--accent);color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+
+/* Empty */
+.empty{text-align:center;padding:40px 20px;color:var(--soft)}
+.empty .icon{font-size:56px;margin-bottom:12px}
+.empty p{font-size:14px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>🧠 人脉图谱</h1>
+    <span class="count" id="count">0 人</span>
+  </div>
+
+  <div class="search-bar">
+    <input id="searchInput" placeholder="搜名字、标签、学校..." oninput="search()">
+    <button onclick="openAdd()">+ 加人</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('all',this)">全部</div>
+    <div class="tab" onclick="switchTab('network',this)">找路径</div>
+    <div class="tab" onclick="switchTab('tags',this)">标签</div>
+  </div>
+
+  <div id="content"></div>
+  <div class="empty" id="empty" style="display:none">
+    <div class="icon">📸</div>
+    <p>还没添加联系人<br>点击右上角「+ 加人」<br>拍照或粘贴微信截图即可</p>
+  </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal" id="addModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>添加联系人</h3>
+      <button class="x" onclick="closeAdd()">&times;</button>
+    </div>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('imgInput').click()">
+      <div class="icon">📷</div>
+      <div class="hint">点击上传微信截图/名片照片<br>或在下方直接粘贴文字</div>
+      <img id="previewImg" class="preview-img" style="display:none">
+    </div>
+    <input type="file" id="imgInput" accept="image/*" style="display:none" onchange="previewImage(this)">
+    <div class="fg">
+      <textarea id="addText" placeholder="或直接粘贴备注文字...&#10;例如：张三，江西南昌人，暨大2010届，做建材，喜欢钓鱼，两个娃"></textarea>
+    </div>
+    <button class="btn" id="addBtn" onclick="doAdd()">🤖 AI 解析并添加</button>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal" id="detailModal">
+  <div class="modal-box" id="detailContent"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API='';
+let persons=[], currentTab='all', imageFile=null;
+
+// ====== Utils ======
+function $(id){return document.getElementById(id)}
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// ====== Load ======
+async function load(){
+  const r=await fetch(`${API}/api/persons${$('searchInput').value.trim()?'?q='+encodeURIComponent($('searchInput').value.trim()):''}`);
+  const d=await r.json();
+  if(d.code===0){persons=d.data; $('count').textContent=d.data.length+' 人'; render()}
+}
+function search(){load()}
+
+// ====== Render ======
+function render(){
+  const c=$('content');
+  if(currentTab==='all')renderAll(c);
+  else if(currentTab==='network')renderNetwork(c);
+  else if(currentTab==='tags')renderTags(c);
+  $('empty').style.display=persons.length===0&&currentTab==='all'?'block':'none';
+}
+
+function renderAll(c){
+  if(!persons.length){c.innerHTML='';return}
+  c.innerHTML=persons.map(p=>{
+    const ex=p.extracted||{};
+    const tags=(p.tags||[]).map(t=>{
+      let cls='tag';
+      if(t.tag_name==='hometown')cls+=' hometown';
+      else if(t.tag_name==='school')cls+=' school';
+      else if(t.tag_name==='interest')cls+=' interest';
+      else if(t.tag_name==='company')cls+=' company';
+      return `<span class="${cls}">${esc(t.tag_value)}</span>`;
+    }).join('');
+    const info=[ex.hometown,ex.school,ex.company,ex.industry].filter(Boolean).join(' · ');
+    return `<div class="card" onclick="openDetail(${p.id})">
+      <div class="c-name">${esc(p.name)}</div>
+      <div class="c-info">${esc(info||'暂无信息')}${p.relation_count?` · ${p.relation_count}个关联`:''}</div>
+      <div class="c-tags">${tags}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderNetwork(c){
+  c.innerHTML=`
+    <div style="background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)">
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">🔗 查找两人之间的最短路径</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select id="pathA" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-size:14px">
+          <option value="">选择第一个人...</option>
+          ${persons.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div style="text-align:center;color:var(--accent);font-size:24px;margin:4px 0">↕</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <select id="pathB" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-size:14px">
+          <option value="">选择第二个人...</option>
+          ${persons.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+      <button class="btn" onclick="findPath()">🔍 查找路径</button>
+      <div id="pathResult" style="margin-top:12px"></div>
+    </div>`;
+}
+
+async function findPath(){
+  const a=$('pathA').value,b=$('pathB').value;
+  if(!a||!b)return toast('请选择两个人');
+  if(a===b)return toast('同一个人');
+  const r=await fetch(`${API}/api/path/${a}/${b}`);
+  const d=await r.json();
+  const result=$('pathResult');
+  if(!d.data||!d.data.path.length){
+    result.innerHTML='<div style="text-align:center;padding:20px;color:var(--soft)">'+esc(d.data?.msg||'未找到路径')+'</div>';
+    return;
+  }
+  const path=d.data.path;
+  result.innerHTML=`
+    <div style="font-size:12px;color:var(--soft);margin-bottom:8px">找到 ${d.data.depth} 度关系</div>
+    ${path.map((step,i)=>`
+      <div class="path-step">
+        <div class="path-depth">${i+1}</div>
+        <div class="path-person">
+          <div class="name">${esc(step.name)}</div>
+          ${step.shared_tags.length?`<div class="shared">${step.shared_tags.map(t=>esc(t.tag_name+':'+t.tag_value)).join(', ')}</div>`:''}
+        </div>
+        ${i<path.length-1?'<div class="path-arrow">→</div>':''}
+      </div>
+    `).join('')}`;
+}
+
+async function renderTags(c){
+  const r=await fetch(`${API}/api/search/tag?name=hometown`);
+  const r2=await fetch(`${API}/api/search/tag?name=school`);
+  const r3=await fetch(`${API}/api/search/tag?name=interest`);
+  const r4=await fetch(`${API}/api/search/tag?name=company`);
+  const [h,s,i,co]=await Promise.all([r,r2,r3,r4].map(x=>x.json()));
+
+  const tagColors={hometown:'hometown',school:'school',interest:'interest',company:'company'};
+  const tagNames={hometown:'🏠 家乡',school:'🎓 学校',interest:'❤️ 兴趣',company:'🏢 公司'};
+
+  c.innerHTML=['hometown','school','company','interest'].map(cat=>{
+    const data=({hometown:h,school:s,interest:i,company:co})[cat];
+    if(!data||!data.data||!data.data.length)return'';
+    return `<div style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px;color:var(--soft)">${tagNames[cat]}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${data.data.map(t=>`<span class="tag ${tagColors[cat]||'tag'}" style="cursor:pointer;font-size:13px;padding:6px 12px" onclick="searchTag('${cat}','${esc(t.tag_value)}')">${esc(t.tag_value)} (${t.cnt})</span>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function searchTag(name,value){
+  const r=await fetch(`${API}/api/search/tag/${name}/${encodeURIComponent(value)}`);
+  const d=await r.json();
+  if(d.code===0&&d.data.length){
+    persons=d.data;
+    currentTab='all';
+    document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+    render();
+  }
+}
+
+// ====== Detail ======
+async function openDetail(id){
+  const r=await fetch(`${API}/api/person/${id}`);
+  const d=await r.json();
+  if(d.code!==0)return;
+  const p=d.data;
+  const ex=p.extracted||{};
+  const fields=[
+    ['📱',ex.phone],['🏠',ex.hometown],['🎓',ex.school],
+    ['🏢',ex.company],['💼',ex.position],['🏭',ex.industry],
+    ['👶',ex.children],['💑',ex.spouse],['📝',ex.other]
+  ].filter(([,v])=>v);
+  const interests=Array.isArray(ex.interests)?ex.interests:[];
+  const rels=(p.relations||[]).map(r=>{
+    const otherName=r.person_a_id===id?r.person_b_name:r.person_a_name;
+    const otherId=r.person_a_id===id?r.person_b_id:r.person_a_id;
+    const relLabel=r.relation_type.replace('same_','共同');
+    return `<div style="padding:6px 0;font-size:13px;cursor:pointer;color:var(--accent)" onclick="openDetail(${otherId})">${esc(otherName)} · ${relLabel}</div>`;
+  }).join('');
+
+  $('detailContent').innerHTML=`
+    <div class="modal-head">
+      <h3>${esc(p.name)}</h3>
+      <button class="x" onclick="closeDetail()">&times;</button>
+    </div>
+    ${fields.length?fields.map(([icon,val])=>`<div style="padding:6px 0;font-size:14px">${icon} ${esc(val)}</div>`).join(''):'<div style="color:var(--soft);font-size:13px">暂无详细信息</div>'}
+    ${interests.length?`<div style="margin-top:8px"><div style="font-size:11px;color:var(--soft);margin-bottom:4px">兴趣</div><div class="c-tags">${interests.map(v=>`<span class="tag interest">${esc(v)}</span>`).join('')}</div></div>`:''}
+    ${rels?`<div style="margin-top:12px"><div style="font-size:12px;color:var(--soft);margin-bottom:4px;font-weight:600">关联人物</div>${rels}</div>`:''}
+    ${p.raw_notes?`<div style="margin-top:12px;padding:10px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--soft);max-height:120px;overflow-y:auto">原始备注: ${esc(p.raw_notes)}</div>`:''}
+  `;
+  $('detailModal').classList.add('show');
+}
+function closeDetail(){$('detailModal').classList.remove('show')}
+
+// ====== Add ======
+function openAdd(){$('addModal').classList.add('show');$('addText').value='';$('previewImg').style.display='none';imageFile=null;$('uploadZone').querySelector('.icon').style.display='';$('uploadZone').querySelector('.hint').textContent='点击上传微信截图/名片照片\n或在下方直接粘贴文字'}
+function closeAdd(){$('addModal').classList.remove('show')}
+function previewImage(input){
+  const file=input.files[0];
+  if(!file)return;
+  imageFile=file;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    $('previewImg').src=e.target.result;
+    $('previewImg').style.display='block';
+    $('uploadZone').querySelector('.icon').style.display='none';
+    $('uploadZone').querySelector('.hint').textContent='已选择: '+file.name;
+  };
+  reader.readAsDataURL(file);
+}
+async function doAdd(){
+  const text=$('addText').value.trim();
+  if(!text&&!imageFile)return toast('请提供文本或图片');
+  const btn=$('addBtn');
+  btn.textContent='⏳ AI 解析中...';
+  btn.disabled=true;
+
+  const fd=new FormData();
+  if(text)fd.append('text',text);
+  if(imageFile)fd.append('image',imageFile);
+
+  const r=await fetch(`${API}/api/person`,{method:'POST',body:fd});
+  const d=await r.json();
+  btn.textContent='🤖 AI 解析并添加';
+  btn.disabled=false;
+
+  if(d.code===0){
+    toast('✅ 已添加并自动关联！');
+    closeAdd();
+    load();
+  }else{
+    toast('❌ '+d.msg);
+  }
+}
+
+// ====== Tab ======
+function switchTab(tab,el){
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+// Init
+load();
+</script>
+</body>
+</html>
