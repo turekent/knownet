@@ -3,6 +3,8 @@ __pycache__/
 *.pyc
 *.pyo
 knownet.db
+userdata/*
+!userdata/.gitkeep
 static/uploads/*
 !static/uploads/.gitkeep
 .env

@@ -11,22 +11,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .login-box{background:var(--card);border-radius:20px;padding:32px 24px;width:320px;box-shadow:0 4px 24px rgba(0,0,0,.08);text-align:center}
 .login-box h1{font-size:24px;font-weight:800;margin-bottom:4px}
 .login-box .sub{font-size:13px;color:var(--soft);margin-bottom:24px}
-.login-box input{width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:16px;outline:none;text-align:center;letter-spacing:2px;transition:border-color .2s}
+.login-box input{width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:16px;outline:none;transition:border-color .2s;text-align:center}
 .login-box input:focus{border-color:var(--accent)}
-.login-box button{width:100%;padding:14px;margin-top:12px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:16px;font-weight:700;cursor:pointer}
+.login-box input[type=password]{letter-spacing:2px;margin-top:8px}
+.login-box button{width:100%;padding:14px;margin-top:16px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:16px;font-weight:700;cursor:pointer}
 .login-box button:active{opacity:.8}
 .login-box .err{color:#DC2626;font-size:13px;margin-top:8px}
+.login-box .demo{font-size:12px;color:var(--soft);margin-top:20px;line-height:1.8}
 </style>
 </head>
 <body>
 <div class="login-box">
   <h1>🧠 KnowNet</h1>
-  <div class="sub">人脉知识图谱</div>
+  <div class="sub">人脉知识图谱 · 多用户版</div>
   <form method="POST">
-    <input type="password" name="password" placeholder="输入访问密码" autofocus>
+    <input type="text" name="username" placeholder="用户名" value="{{ request.form.get('username', '') }}" autofocus>
+    <input type="password" name="password" placeholder="密码">
     <button type="submit">进入</button>
     {% if error %}<div class="err">{{ error }}</div>{% endif %}
   </form>
+  {% if not error %}
+  <div class="demo">
+    首次使用？联系管理员开通账号<br>
+    <a href="/login?next=admin" style="color:var(--accent);text-decoration:none">管理员入口 →</a>
+  </div>
+  {% endif %}
 </div>
 </body>
 </html>

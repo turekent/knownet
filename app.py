@@ -1,55 +1,140 @@
 #!/usr/bin/env python3
-"""人脉知识图谱 - 手机端 AI 驱动个人关系管理"""
-import os, json, uuid, base64, datetime, sqlite3, re, urllib.request
+"""人脉知识图谱 v2.0 — 多用户 + 管理后台"""
+import os, json, uuid, base64, datetime, sqlite3, re, urllib.request, hashlib, secrets
 from functools import wraps
 from flask import Flask, request, jsonify, render_template, g, session, redirect, url_for
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(APP_ROOT, "knownet.db")
+MAIN_DB = os.path.join(APP_ROOT, "knownet.db")
+USERDATA_DIR = os.path.join(APP_ROOT, "userdata")
 SCHEMA_PATH = os.path.join(APP_ROOT, "schema.sql")
 UPLOAD_DIR = os.path.join(APP_ROOT, "static", "uploads")
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
-app.secret_key = os.urandom(24).hex()
+app.secret_key = os.urandom(32).hex()
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(USERDATA_DIR, exist_ok=True)
 
 # API Keys
 DS_KEY_PATH = "/home/ubuntu/.ds_key"
 ZHIPU_KEY = "REDACTED"
 
-# Auth
-KNOWNET_PASSWORD = os.environ.get("KNOWNET_PASSWORD", "REDACTED")
+# ==================== Auth ====================
+
+def hash_password(pwd):
+    salt = secrets.token_hex(8)
+    h = hashlib.sha256(f"{salt}:{pwd}".encode()).hexdigest()
+    return f"{salt}:{h}"
+
+def check_password(pwd, stored):
+    try:
+        salt, h = stored.split(":")
+        return hashlib.sha256(f"{salt}:{pwd}".encode()).hexdigest() == h
+    except:
+        return False
 
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not session.get("authenticated"):
+        if not session.get("user_id"):
             if request.is_json or request.path.startswith("/api/"):
                 return jsonify({"code": 401, "msg": "请先登录"}), 401
             return redirect(url_for("login_page"))
         return f(*args, **kwargs)
     return decorated
 
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("is_admin"):
+            return jsonify({"code": 403, "msg": "仅管理员可访问"}), 403
+        return f(*args, **kwargs)
+    return decorated
+
+# ==================== Database ====================
+
+def get_admin_db():
+    """主数据库：只存用户账号"""
+    if "admin_db" not in g:
+        g.admin_db = sqlite3.connect(MAIN_DB)
+        g.admin_db.row_factory = sqlite3.Row
+    return g.admin_db
+
 def get_db():
-    if "db" not in g:
-        g.db = sqlite3.connect(DB_PATH)
-        g.db.row_factory = sqlite3.Row
-        g.db.execute("PRAGMA journal_mode=WAL")
-    return g.db
+    """用户数据库：每个用户独立的 SQLite 文件"""
+    user_id = session.get("user_id")
+    if not user_id:
+        raise Exception("未登录")
+    db_key = f"user_db_{user_id}"
+    if db_key not in g:
+        db_path = os.path.join(USERDATA_DIR, f"knownet_{user_id}.db")
+        g.db_path = db_path
+        g.__dict__[db_key] = sqlite3.connect(db_path)
+        g.__dict__[db_key].row_factory = sqlite3.Row
+        g.__dict__[db_key].execute("PRAGMA journal_mode=WAL")
+        # Init user schema if not exists
+        if os.path.exists(SCHEMA_PATH):
+            with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
+                g.__dict__[db_key].executescript(f.read())
+            g.__dict__[db_key].commit()
+    return g.__dict__[db_key]
 
 @app.teardown_appcontext
 def close_db(exception):
-    db = g.pop("db", None)
-    if db: db.close()
+    for k in list(g.__dict__.keys()):
+        if k.startswith("user_db_") or k == "admin_db":
+            db = g.__dict__.pop(k, None)
+            if db:
+                db.close()
 
-def init_db():
-    with app.app_context():
-        db = get_db()
-        if os.path.exists(SCHEMA_PATH):
-            with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
-                db.executescript(f.read())
-            db.commit()
+def init_main_db():
+    """初始化主数据库（用户表）"""
+    db = sqlite3.connect(MAIN_DB)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            is_admin INTEGER DEFAULT 0,
+            is_active INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_login TIMESTAMP
+        )
+    """)
+    db.commit()
+
+    # Create default admin if no users exist
+    count = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    if count == 0:
+        db.execute("INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, 1)",
+                   ("admin", hash_password("REDACTED")))
+        db.commit()
+        print("✅ 默认管理员已创建: admin / REDACTED")
+    db.close()
+
+def migrate_old_data():
+    """迁移旧版单用户数据 → 用户 ID=1 的独立数据库"""
+    old_db = os.path.join(APP_ROOT, "knownet.db")
+    target_db = os.path.join(USERDATA_DIR, "knownet_1.db")
+
+    # Check if old data exists and target doesn't
+    if not os.path.exists(old_db):
+        return
+    if os.path.exists(target_db):
+        return  # Already migrated
+
+    # Check if old DB has persons table (not just users table)
+    check = sqlite3.connect(old_db)
+    tables = [r[0] for r in check.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
+    check.close()
+
+    if "persons" not in tables:
+        return  # Old DB is already just a users table
+
+    # Migrate: rename old DB to user_1's DB
+    os.rename(old_db, target_db)
+    print(f"✅ 旧数据已迁移 → {target_db}")
 
 # ==================== AI 解析 ====================
 
@@ -72,7 +157,6 @@ EXTRACT_PROMPT = """你是一个信息提取助手。从以下文本/图片中�
 只提取明确提到的信息，不确定的字段用空字符串。interests是数组。"""
 
 def call_deepseek(prompt, text):
-    """DeepSeek 文本提取"""
     ds_key = ""
     if os.path.exists(DS_KEY_PATH):
         with open(DS_KEY_PATH, "r") as f:
@@ -99,7 +183,6 @@ def call_deepseek(prompt, text):
         resp = urllib.request.urlopen(req, timeout=30)
         result = json.loads(resp.read())
         content = result["choices"][0]["message"]["content"]
-        # Clean up markdown code blocks
         content = re.sub(r'```\w*\n?', '', content)
         content = content.strip().strip('`')
         return json.loads(content)
@@ -108,7 +191,6 @@ def call_deepseek(prompt, text):
         return None
 
 def call_zhipu_vision(image_path, text_prompt=""):
-    """智谱 GLM-4V 图片识别"""
     with open(image_path, "rb") as f:
         img_b64 = base64.b64encode(f.read()).decode()
 
@@ -138,10 +220,8 @@ def call_zhipu_vision(image_path, text_prompt=""):
         return None
 
 def extract_and_save(raw_text, image_path=None):
-    """统一提取入口：图片 OCR → DeepSeek 解析 → 入库"""
     text = raw_text or ""
 
-    # Step 1: 如果有图片，先用智谱读图
     if image_path:
         ocr_text = call_zhipu_vision(image_path,
             "请逐字读取图片中的所有文字信息，包括姓名、手机号、地区、学校、公司、备注等。如果是微信资料页，请特别关注备注名和标签")
@@ -151,12 +231,10 @@ def extract_and_save(raw_text, image_path=None):
     if not text.strip():
         return None, "未识别到任何文字信息"
 
-    # Step 2: DeepSeek 结构化提取
     extracted = call_deepseek(EXTRACT_PROMPT, text)
     if not extracted:
         return None, "AI 提取失败，请重试"
 
-    # Step 3: 入库
     db = get_db()
     name = (extracted.get("name") or "未命名").strip()
     phone = (extracted.get("phone") or "").strip()
@@ -177,11 +255,9 @@ def extract_and_save(raw_text, image_path=None):
     )
     pid = db.execute("SELECT last_insert_rowid()").fetchone()[0]
 
-    # Step 4: 自动打标签
     tags_to_add = []
     if hometown:
         tags_to_add.append(("hometown", hometown))
-        # 自动提取省份
         prov = hometown[:2] if len(hometown) >= 2 else hometown
         if prov != hometown:
             tags_to_add.append(("hometown_province", prov))
@@ -211,14 +287,10 @@ def extract_and_save(raw_text, image_path=None):
             pass
 
     db.commit()
-
-    # Step 5: 自动发现关系（同标签的人自动关联）
     auto_link_by_tags(pid)
-
     return pid, None
 
 def auto_link_by_tags(person_id):
-    """基于共同标签自动建立关系"""
     db = get_db()
     my_tags = db.execute(
         "SELECT tag_name, tag_value FROM tags WHERE person_id=?", (person_id,)
@@ -241,7 +313,7 @@ def auto_link_by_tags(person_id):
                 pass
     db.commit()
 
-# ==================== API ====================
+# ==================== User Routes ====================
 
 @app.route("/")
 @login_required
@@ -251,17 +323,37 @@ def index():
 @app.route("/login", methods=["GET", "POST"])
 def login_page():
     if request.method == "POST":
+        username = request.form.get("username", "").strip()
         pwd = request.form.get("password", "")
-        if pwd == KNOWNET_PASSWORD:
-            session["authenticated"] = True
+        if not username:
+            return render_template("login.html", error="请输入用户名")
+
+        admin_db = get_admin_db()
+        user = admin_db.execute(
+            "SELECT * FROM users WHERE username=? AND is_active=1", (username,)
+        ).fetchone()
+
+        if user and check_password(pwd, user["password_hash"]):
+            session["user_id"] = user["id"]
+            session["username"] = user["username"]
+            session["is_admin"] = bool(user["is_admin"])
+            admin_db.execute("UPDATE users SET last_login=CURRENT_TIMESTAMP WHERE id=?", (user["id"],))
+            admin_db.commit()
+
+            if user["is_admin"] and request.args.get("next") == "admin":
+                return redirect(url_for("admin_panel"))
             return redirect(url_for("index"))
-        return render_template("login.html", error="密码错误")
+
+        return render_template("login.html", error="用户名或密码错误")
+
     return render_template("login.html")
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login_page"))
+
+# ==================== User API ====================
 
 @app.route("/api/persons", methods=["GET"])
 @login_required
@@ -300,13 +392,10 @@ def api_person_detail(pid):
         return jsonify({"code": 404, "msg": "不存在"})
     person = dict(r)
     person["extracted"] = json.loads(person["extracted"]) if person["extracted"] else {}
-
-    # Tags
     person["tags"] = [dict(t) for t in db.execute(
         "SELECT * FROM tags WHERE person_id=?", (pid,)
     ).fetchall()]
 
-    # Relations with names
     rels = db.execute(
         """SELECT r.*, p1.name as person_a_name, p2.name as person_b_name
            FROM relations r
@@ -322,11 +411,10 @@ def api_person_detail(pid):
 @app.route("/api/person", methods=["POST"])
 @login_required
 def api_person_add():
-    """添加人物：支持图片上传或纯文本"""
     text = request.form.get("text", "").strip()
     image = request.files.get("image")
-
     image_path = None
+
     if image and image.filename:
         ext = os.path.splitext(image.filename)[1].lower()
         if ext not in (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"):
@@ -347,7 +435,6 @@ def api_person_add():
 @app.route("/api/search/tag", methods=["GET"])
 @login_required
 def api_search_tag():
-    """按标签搜索"""
     tag_name = request.args.get("name", "").strip()
     tag_value = request.args.get("value", "").strip()
     if not tag_name:
@@ -367,7 +454,6 @@ def api_search_tag():
 @app.route("/api/search/tag/<tag_name>/<path:tag_value>", methods=["GET"])
 @login_required
 def api_tag_persons(tag_name, tag_value):
-    """获取某个标签下的所有人"""
     db = get_db()
     rows = db.execute(
         """SELECT p.* FROM persons p JOIN tags t ON p.id=t.person_id
@@ -389,11 +475,9 @@ def api_tag_persons(tag_name, tag_value):
 @app.route("/api/path/<int:a>/<int:b>", methods=["GET"])
 @login_required
 def api_find_path(a, b):
-    """BFS 找两个人之间的最短关系路径（六度人脉）"""
     db = get_db()
     max_depth = 6
 
-    # Build adjacency list
     all_rels = db.execute("SELECT person_a_id, person_b_id FROM relations").fetchall()
     adj = {}
     for r in all_rels:
@@ -403,7 +487,6 @@ def api_find_path(a, b):
     if a not in adj or b not in adj:
         return jsonify({"code": 0, "data": {"path": [], "msg": "未找到关联路径"}})
 
-    # BFS
     from collections import deque
     visited = {a}
     parent = {a: None}
@@ -424,14 +507,12 @@ def api_find_path(a, b):
     if not found:
         return jsonify({"code": 0, "data": {"path": [], "msg": f"未在{max_depth}度内找到路径"}})
 
-    # Reconstruct path
     path_ids = []
     node = b
     while node is not None:
         path_ids.insert(0, node)
         node = parent[node]
 
-    # Get person names and shared tags
     path = []
     for i, pid in enumerate(path_ids):
         p = db.execute("SELECT id, name, phone FROM persons WHERE id=?", (pid,)).fetchone()
@@ -453,9 +534,148 @@ def api_find_path(a, b):
 
     return jsonify({"code": 0, "data": {"path": path, "depth": len(path)-1}})
 
+@app.route("/api/user/info")
+@login_required
+def api_user_info():
+    return jsonify({"username": session.get("username"), "is_admin": session.get("is_admin")})
+
+# ==================== Admin Panel ====================
+
+@app.route("/admin")
+def admin_panel():
+    """管理后台：仅管理员可访问"""
+    if not session.get("is_admin"):
+        return redirect(url_for("login_page", next="admin"))
+    return render_template("admin.html")
+
+@app.route("/api/admin/users")
+@login_required
+@admin_required
+def api_admin_users():
+    """列出所有用户（仅元数据，不含用户内部数据）"""
+    db = get_admin_db()
+    users = db.execute(
+        "SELECT id, username, is_admin, is_active, created_at, last_login FROM users ORDER BY id"
+    ).fetchall()
+
+    result = []
+    for u in users:
+        user = dict(u)
+        # Count user's persons (aggregate only, no actual data)
+        user_db_path = os.path.join(USERDATA_DIR, f"knownet_{u['id']}.db")
+        try:
+            udb = sqlite3.connect(f"file:{user_db_path}?mode=ro", uri=True)
+            n_persons = udb.execute("SELECT COUNT(*) FROM persons").fetchone()[0]
+            n_tags = udb.execute("SELECT COUNT(*) FROM tags").fetchone()[0]
+            n_rels = udb.execute("SELECT COUNT(*) FROM relations").fetchone()[0]
+            udb.close()
+            user["person_count"] = n_persons
+            user["tag_count"] = n_tags
+            user["relation_count"] = n_rels
+        except:
+            user["person_count"] = 0
+            user["tag_count"] = 0
+            user["relation_count"] = 0
+        result.append(user)
+
+    return jsonify({"code": 0, "data": result})
+
+@app.route("/api/admin/user", methods=["POST"])
+@login_required
+@admin_required
+def api_admin_create_user():
+    """创建新用户"""
+    username = request.json.get("username", "").strip()
+    password = request.json.get("password", "").strip()
+
+    if not username or len(username) < 2:
+        return jsonify({"code": 400, "msg": "用户名至少2个字符"})
+    if not password or len(password) < 4:
+        return jsonify({"code": 400, "msg": "密码至少4个字符"})
+
+    db = get_admin_db()
+    exists = db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+    if exists:
+        return jsonify({"code": 400, "msg": "用户名已存在"})
+
+    db.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
+               (username, hash_password(password)))
+    db.commit()
+
+    return jsonify({"code": 0, "msg": "用户创建成功"})
+
+@app.route("/api/admin/user/<int:uid>/toggle", methods=["POST"])
+@login_required
+@admin_required
+def api_admin_toggle_user(uid):
+    """启用/禁用用户"""
+    db = get_admin_db()
+    user = db.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+    if not user:
+        return jsonify({"code": 404, "msg": "用户不存在"})
+    if user["is_admin"]:
+        return jsonify({"code": 400, "msg": "不能禁用管理员"})
+
+    new_status = 0 if user["is_active"] else 1
+    db.execute("UPDATE users SET is_active=? WHERE id=?", (new_status, uid))
+    db.commit()
+
+    return jsonify({"code": 0, "msg": "已" + ("启用" if new_status else "禁用")})
+
+@app.route("/api/admin/user/<int:uid>/reset-password", methods=["POST"])
+@login_required
+@admin_required
+def api_admin_reset_password(uid):
+    """重置用户密码"""
+    new_pwd = request.json.get("password", "").strip()
+    if len(new_pwd) < 4:
+        return jsonify({"code": 400, "msg": "密码至少4个字符"})
+
+    db = get_admin_db()
+    db.execute("UPDATE users SET password_hash=? WHERE id=?", (hash_password(new_pwd), uid))
+    db.commit()
+
+    return jsonify({"code": 0, "msg": "密码已重置"})
+
+@app.route("/api/admin/stats")
+@login_required
+@admin_required
+def api_admin_stats():
+    """总体统计数据（不含任何用户个人数据）"""
+    db = get_admin_db()
+    total_users = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    active_users = db.execute("SELECT COUNT(*) FROM users WHERE is_active=1").fetchone()[0]
+
+    total_persons = 0
+    total_relations = 0
+    for fname in os.listdir(USERDATA_DIR):
+        if fname.startswith("knownet_") and fname.endswith(".db"):
+            try:
+                path = os.path.join(USERDATA_DIR, fname)
+                udb = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+                total_persons += udb.execute("SELECT COUNT(*) FROM persons").fetchone()[0]
+                total_relations += udb.execute("SELECT COUNT(*) FROM relations").fetchone()[0]
+                udb.close()
+            except:
+                pass
+
+    return jsonify({
+        "code": 0,
+        "data": {
+            "total_users": total_users,
+            "active_users": active_users,
+            "total_persons": total_persons,
+            "total_relations": total_relations
+        }
+    })
+
 # ==================== 启动 ====================
 
-init_db()
+# 迁移旧数据（如果存在）
+migrate_old_data()
+
+# 初始化主数据库（用户表）
+init_main_db()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8200, debug=False)
