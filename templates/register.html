@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ lang }}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>KnowNet · 注册</title>
+<title>KnowNet</title>
 <style>
 :root{--bg:#F8F9FB;--card:#fff;--ink:#1a1a2e;--soft:#6b7280;--accent:#4F46E5;--border:#e5e7eb;--radius:14px}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -19,20 +19,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .box .err{color:#DC2626;font-size:13px;margin-top:4px}
 .box .hint{font-size:11px;color:var(--soft);margin-top:8px}
 .box .link{font-size:13px;color:var(--accent);text-decoration:none;margin-top:16px;display:block}
+.box .lang-switch{font-size:11px;color:var(--soft);margin-top:16px}
+.box .lang-switch a{color:var(--accent);text-decoration:none}
 </style>
 </head>
 <body>
 <div class="box">
   <h1>KnowNet</h1>
-  <div class="sub">创建你的知识图谱</div>
+  <div class="sub">{{ T('register_title') }}</div>
   <form method="POST">
-    <input type="text" name="username" placeholder="用户名（中英文均可）" value="{{ request.form.get('username', '') }}" autofocus>
-    <input type="password" name="password" placeholder="密码（6-16位，需含字母+数字）">
-    <input type="password" name="password2" placeholder="确认密码">
-    <button type="submit">注册</button>
+    <input type="text" name="username" placeholder="{{ T('register_username') }}" value="{{ request.form.get('username', '') }}" autofocus>
+    <input type="password" name="password" placeholder="{{ T('register_password') }}">
+    <input type="password" name="password2" placeholder="{{ T('register_password2') }}">
+    <button type="submit">{{ T('register_btn') }}</button>
     {% if error %}<div class="err">{{ error }}</div>{% endif %}
   </form>
-  <div class="hint">已有账号？<a href="/login" style="color:var(--accent)">立即登录</a></div>
+  <div class="hint">{{ T('register_login_hint') }} <a href="/login" style="color:var(--accent)">{{ T('register_login_link') }}</a></div>
+  <div class="lang-switch">
+    <a href="?lang={{ 'zh' if lang == 'en' else 'en' }}">{{ T('switch_lang') }}</a>
+  </div>
 </div>
 </body>
 </html>

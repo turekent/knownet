@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ lang }}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>KnowNet · 管理后台</title>
+<title>KnowNet · Admin</title>
 <style>
 :root{--bg:#F8F9FB;--card:#fff;--ink:#1a1a2e;--soft:#6b7280;--accent:#4F46E5;--green:#059669;--red:#DC2626;--border:#e5e7eb;--radius:14px}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -11,23 +11,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .app{max-width:640px;margin:0 auto;padding:16px}
 .header{display:flex;justify-content:space-between;align-items:center;padding:8px 0 16px}
 .header h1{font-size:20px;font-weight:800}
-.header .logout{font-size:13px;color:var(--accent);text-decoration:none}
-
+.header a{font-size:13px;color:var(--accent);text-decoration:none;margin-right:12px}
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px}
 .stat{background:var(--card);border-radius:var(--radius);padding:16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.04)}
 .stat .num{font-size:28px;font-weight:800;color:var(--accent)}
 .stat .label{font-size:11px;color:var(--soft);margin-top:4px}
-
 .section{margin-bottom:16px}
 .section h2{font-size:14px;font-weight:700;margin-bottom:8px;color:var(--soft)}
-
 .card{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,.04);display:flex;justify-content:space-between;align-items:center;gap:12px}
 .card .info{flex:1;min-width:0}
 .card .name{font-size:15px;font-weight:700}
 .card .meta{font-size:11px;color:var(--soft);margin-top:2px}
 .card .actions{display:flex;gap:6px;flex-shrink:0}
 .card .counts{font-size:12px;color:var(--soft);white-space:nowrap}
-
 .btn{padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;border:none;cursor:pointer}
 .btn-accent{background:var(--accent);color:#fff}
 .btn-outline{background:var(--bg);color:var(--ink);border:1px solid var(--border)}
@@ -37,7 +33,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .badge-active{background:#D1FAE5;color:var(--green)}
 .badge-disabled{background:#FEE2E2;color:var(--red)}
 .badge-admin{background:#DBEAFE;color:#1E40AF}
-
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center}
 .modal.show{display:flex}
 .modal-box{background:#fff;width:90%;max-width:360px;border-radius:20px;padding:24px}
@@ -45,7 +40,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .modal-box input{width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:none;margin-bottom:8px}
 .modal-box .btn-row{display:flex;gap:8px;margin-top:12px}
 .modal-box .btn-row .btn{flex:1}
-
 .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:10px 24px;border-radius:20px;font-size:14px;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none}
 .toast.show{opacity:1}
 </style>
@@ -53,53 +47,65 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 <body>
 <div class="app">
   <div class="header">
-    <h1>⚙️ 管理后台</h1>
+    <h1>⚙️ {{ T('admin_title') }}</h1>
     <div>
-      <a href="/" style="font-size:13px;color:var(--accent);text-decoration:none;margin-right:12px">← 返回</a>
-      <a href="/logout" class="logout">退出</a>
+      <a href="/">{{ T('admin_back') }}</a>
+      <a href="/logout" style="margin-right:0">{{ T('admin_logout') }}</a>
     </div>
   </div>
-
   <div class="stats" id="stats"></div>
-
   <div class="section">
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <h2>👥 用户列表</h2>
-      <button class="btn btn-accent" onclick="showCreate()">+ 创建用户</button>
+      <h2>{{ T('admin_users') }}</h2>
+      <button class="btn btn-accent" onclick="showCreate()">{{ T('admin_create') }}</button>
     </div>
     <div id="userList"></div>
   </div>
 </div>
 
-<!-- Create User Modal -->
 <div class="modal" id="createModal">
   <div class="modal-box">
-    <h3>创建新用户</h3>
-    <input id="newUsername" placeholder="用户名（登录用）">
-    <input id="newPassword" type="text" placeholder="初始密码（用户可自行修改）">
+    <h3>{{ T('admin_create_title') }}</h3>
+    <input id="newUsername" placeholder="{{ T('admin_create_user') }}">
+    <input id="newPassword" type="text" placeholder="{{ T('admin_create_pwd') }}">
     <div class="btn-row">
-      <button class="btn btn-outline" onclick="closeCreate()">取消</button>
-      <button class="btn btn-accent" onclick="doCreate()">创建</button>
+      <button class="btn btn-outline" onclick="closeCreate()">{{ T('admin_cancel') }}</button>
+      <button class="btn btn-accent" onclick="doCreate()">{{ T('admin_confirm') }}</button>
     </div>
   </div>
 </div>
 
-<!-- Reset Password Modal -->
 <div class="modal" id="resetModal">
   <div class="modal-box">
-    <h3>重置密码</h3>
+    <h3>{{ T('admin_reset_title') }}</h3>
     <div id="resetUser" style="font-size:14px;margin-bottom:12px;color:var(--soft)"></div>
-    <input id="newPwd" type="text" placeholder="新密码">
+    <input id="newPwd" type="text" placeholder="{{ T('admin_reset_pwd') }}">
     <div class="btn-row">
-      <button class="btn btn-outline" onclick="closeReset()">取消</button>
-      <button class="btn btn-accent" onclick="doReset()">确认重置</button>
+      <button class="btn btn-outline" onclick="closeReset()">{{ T('admin_cancel') }}</button>
+      <button class="btn btn-accent" onclick="doReset()">{{ T('admin_reset_confirm') }}</button>
     </div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
+const TXT = {{ {
+  "badge_admin": T("admin_badge_admin"),
+  "badge_active": T("admin_badge_active"),
+  "badge_disabled": T("admin_badge_disabled"),
+  "never_login": T("admin_never_login"),
+  "last_login": T("admin_last_login"),
+  "btn_password": T("admin_btn_password"),
+  "btn_disable": T("admin_btn_disable"),
+  "btn_enable": T("admin_btn_enable"),
+  "stats_users": T("admin_stats_users"),
+  "stats_active": T("admin_stats_active"),
+  "stats_persons": T("admin_stats_persons"),
+  "stats_relations": T("admin_stats_relations"),
+  "err_username_short": T("err_username_short"),
+  "err_password_length": T("err_password_length"),
+} | tojson }};
+
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)}
 
 async function load(){
@@ -108,56 +114,52 @@ async function load(){
     fetch('/api/admin/stats').then(r=>r.json())
   ]);
 
-  // Stats
   if(st.code===0){
     const d=st.data;
-    document.getElementById('stats').innerHTML=`
-      <div class="stat"><div class="num">${d.total_users}</div><div class="label">总用户</div></div>
-      <div class="stat"><div class="num">${d.active_users}</div><div class="label">活跃用户</div></div>
-      <div class="stat"><div class="num">${d.total_persons}</div><div class="label">总联系人</div></div>
-      <div class="stat"><div class="num">${d.total_relations}</div><div class="label">关系链路</div></div>
-    `;
+    document.getElementById('stats').innerHTML=
+      `<div class="stat"><div class="num">${d.total_users}</div><div class="label">${TXT.stats_users}</div></div>
+       <div class="stat"><div class="num">${d.active_users}</div><div class="label">${TXT.stats_active}</div></div>
+       <div class="stat"><div class="num">${d.total_persons}</div><div class="label">${TXT.stats_persons}</div></div>
+       <div class="stat"><div class="num">${d.total_relations}</div><div class="label">${TXT.stats_relations}</div></div>`;
   }
 
-  // User list
   if(users.code===0){
-    document.getElementById('userList').innerHTML=users.data.map(u=>`
-      <div class="card">
+    document.getElementById('userList').innerHTML=users.data.map(u=>{
+      const loginInfo = u.last_login ? TXT.last_login + ' ' + u.last_login : TXT.never_login;
+      return `<div class="card">
         <div class="info">
           <div class="name">
             ${esc(u.username)}
-            ${u.is_admin?'<span class="badge badge-admin">管理员</span>':''}
-            <span class="badge ${u.is_active?'badge-active':'badge-disabled'}">${u.is_active?'正常':'已禁用'}</span>
+            ${u.is_admin?'<span class="badge badge-admin">'+TXT.badge_admin+'</span>':''}
+            <span class="badge ${u.is_active?'badge-active':'badge-disabled'}">${u.is_active?TXT.badge_active:TXT.badge_disabled}</span>
           </div>
-          <div class="meta">👤 ${u.person_count}人 · 🏷️ ${u.tag_count}标签 · 🔗 ${u.relation_count}关联 · ${u.last_login?'最后登录 '+u.last_login:'从未登录'}</div>
+          <div class="meta">👤 ${u.person_count}人 · 🏷️ ${u.tag_count}标签 · 🔗 ${u.relation_count}关联 · ${loginInfo}</div>
         </div>
         <div class="actions">
           ${!u.is_admin?`
-            <button class="btn btn-outline" onclick="resetPwd(${u.id},'${esc(u.username)}')">改密</button>
-            <button class="btn ${u.is_active?'btn-danger':'btn-accent'}" onclick="toggleUser(${u.id})">${u.is_active?'禁用':'启用'}</button>
+            <button class="btn btn-outline" onclick="resetPwd(${u.id},'${esc(u.username)}')">${TXT.btn_password}</button>
+            <button class="btn ${u.is_active?'btn-danger':'btn-accent'}" onclick="toggleUser(${u.id})">${u.is_active?TXT.btn_disable:TXT.btn_enable}</button>
           `:''}
         </div>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   }
 }
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
-// Create
 function showCreate(){document.getElementById('createModal').classList.add('show')}
 function closeCreate(){document.getElementById('createModal').classList.remove('show')}
 async function doCreate(){
   const u=document.getElementById('newUsername').value.trim();
   const p=document.getElementById('newPassword').value.trim();
-  if(!u||!p)return toast('请填写完整');
+  if(!u||!p)return toast(TXT.err_username_short);
   const r=await fetch('/api/admin/user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
   const d=await r.json();
-  if(d.code===0){toast('✅ 已创建');closeCreate();load();document.getElementById('newUsername').value='';document.getElementById('newPassword').value=''}
+  if(d.code===0){toast('✅ Created');closeCreate();load();document.getElementById('newUsername').value='';document.getElementById('newPassword').value=''}
   else toast('❌ '+d.msg);
 }
 
-// Toggle
 async function toggleUser(uid){
   const r=await fetch('/api/admin/user/'+uid+'/toggle',{method:'POST'});
   const d=await r.json();
@@ -165,20 +167,19 @@ async function toggleUser(uid){
   load();
 }
 
-// Reset password
 let resetUid=null;
 function resetPwd(uid,name){
   resetUid=uid;
-  document.getElementById('resetUser').textContent='用户: '+name;
+  document.getElementById('resetUser').textContent='User: '+name;
   document.getElementById('resetModal').classList.add('show');
 }
 function closeReset(){document.getElementById('resetModal').classList.remove('show');resetUid=null}
 async function doReset(){
   const p=document.getElementById('newPwd').value.trim();
-  if(!p)return toast('请输入新密码');
+  if(!p)return toast(TXT.err_password_length);
   const r=await fetch('/api/admin/user/'+resetUid+'/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p})});
   const d=await r.json();
-  if(d.code===0){toast('✅ 密码已重置');closeReset();document.getElementById('newPwd').value=''}
+  if(d.code===0){toast('✅ Password reset');closeReset();document.getElementById('newPwd').value=''}
   else toast('❌ '+d.msg);
 }
 
