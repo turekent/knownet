@@ -18,7 +18,10 @@ os.makedirs(USERDATA_DIR, exist_ok=True)
 
 # API Keys
 DS_KEY_PATH = "/home/ubuntu/.ds_key"
-ZHIPU_KEY = "REDACTED"
+ZHIPU_KEY = os.environ.get("ZHIPU_KEY", "")
+
+# Auth - default admin password from env, fallback to random
+KNOWNET_ADMIN_PASSWORD = os.environ.get("KNOWNET_ADMIN_PASSWORD", secrets.token_hex(8))
 
 # ==================== Auth ====================
 
@@ -108,7 +111,7 @@ def init_main_db():
     count = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
     if count == 0:
         db.execute("INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, 1)",
-                   ("admin", hash_password("REDACTED")))
+                   ("admin", hash_password(KNOWNET_ADMIN_PASSWORD)))
         db.commit()
         print("✅ 默认管理员已创建: admin / REDACTED")
     db.close()
