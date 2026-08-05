@@ -11,3 +11,6 @@ static/uploads/*
 .ds_key
 *.log
 drafts/
+data/
+knownet_admin_password.txt
+knownet_secret.key

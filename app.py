@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """人脉知识图谱 v2.0 — 多用户 + 管理后台"""
-import os, json, uuid, base64, datetime, sqlite3, re, urllib.request, hashlib, secrets
+import os, json, uuid, base64, datetime, sqlite3, re, urllib.request, hashlib, secrets, time
 from functools import wraps
 from flask import Flask, request, jsonify, render_template, g, session, redirect, url_for
 
@@ -8,20 +8,45 @@ APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 MAIN_DB = os.path.join(APP_ROOT, "knownet.db")
 USERDATA_DIR = os.path.join(APP_ROOT, "userdata")
 SCHEMA_PATH = os.path.join(APP_ROOT, "schema.sql")
-UPLOAD_DIR = os.path.join(APP_ROOT, "static", "uploads")
+# 上传目录移出 static/（避免公网裸访问），改走鉴权接口
+UPLOAD_DIR = os.path.join(APP_ROOT, "data", "uploads")
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
-app.secret_key = os.urandom(32).hex()
+# secret_key：环境变量优先，其次持久化密钥文件（重启不失效、多进程一致）
+app.secret_key = os.environ.get("KNOWNET_SECRET_KEY", "")
+if not app.secret_key:
+    _key_file = os.path.join(APP_ROOT, "knownet_secret.key")
+    if os.path.exists(_key_file):
+        with open(_key_file) as f:
+            app.secret_key = f.read().strip()
+    else:
+        app.secret_key = secrets.token_hex(32)
+        with open(_key_file, "w") as f:
+            f.write(app.secret_key)
+        os.chmod(_key_file, 0o600)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
+# HTTPS 部署：cookie 加 Secure + SameSite 防 CSRF/中间人
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(USERDATA_DIR, exist_ok=True)
 
 # API Keys
-DS_KEY_PATH = "/home/ubuntu/.ds_key"
+DS_KEY_PATH = os.environ.get("DS_KEY_PATH", os.path.expanduser("~/.ds_key"))
 ZHIPU_KEY = os.environ.get("ZHIPU_KEY", "")
 
-# Auth - default admin password from env, fallback to random
-KNOWNET_ADMIN_PASSWORD = os.environ.get("KNOWNET_ADMIN_PASSWORD", secrets.token_hex(8))
+# Auth - default admin password from env, fallback: 持久化到文件避免锁死
+KNOWNET_ADMIN_PASSWORD = os.environ.get("KNOWNET_ADMIN_PASSWORD", "")
+if not KNOWNET_ADMIN_PASSWORD:
+    _pw_file = os.path.join(APP_ROOT, "knownet_admin_password.txt")
+    if os.path.exists(_pw_file):
+        with open(_pw_file) as f:
+            KNOWNET_ADMIN_PASSWORD = f.read().strip()
+    else:
+        KNOWNET_ADMIN_PASSWORD = secrets.token_urlsafe(10)
+        with open(_pw_file, "w") as f:
+            f.write(KNOWNET_ADMIN_PASSWORD)
+        os.chmod(_pw_file, 0o600)
 
 # ==================== i18n ====================
 
@@ -58,17 +83,26 @@ LANG = {
         "login_btn": "进入",
         "login_register_hint": "首次使用？",
         "login_register_link": "立即注册 →",
-        "register_title": "创建你的知识图谱",
+        "register_title": "申请使用 KnowNet",
         "register_username": "用户名（中英文均可）",
-        "register_password": "密码（6-16位，需含字母+数字）",
+        "register_password": "密码（6-16位，含字母数字）",
         "register_password2": "确认密码",
-        "register_btn": "注册",
+        "register_btn": "提交申请",
         "register_login_hint": "已有账号？",
+        "apply_hook": "KnowNet 目前是小范围试用。告诉我你是谁、为什么需要它——认真写的申请我都会看。",
+        "apply_reason": "为什么需要它？（至少10个字）",
+        "apply_source": "从哪看到的？（选填：公众号/朋友/其他）",
+        "apply_after": "审核通过后即可登录，通常1天内。",
         "register_login_link": "立即登录",
         "admin_title": "管理后台",
         "admin_back": "← 返回",
         "admin_logout": "退出",
         "admin_users": "👥 用户列表",
+        "admin_applications": "📋 待审核申请",
+        "admin_appl_pending": "待审核",
+        "admin_appl_approve": "通过",
+        "admin_appl_reject": "拒绝",
+        "admin_appl_empty": "暂无待审核申请",
         "admin_create": "+ 创建用户",
         "admin_create_title": "创建新用户",
         "admin_create_user": "用户名（登录用）",
@@ -106,7 +140,10 @@ LANG = {
         "err_password_mismatch": "两次密码不一致",
         "err_user_exists": "用户名已存在",
         "err_login": "用户名或密码错误",
+        "err_login_locked": "尝试次数过多，已锁定，请{m}分钟后再试",
         "err_empty_username": "请输入用户名",
+        "err_reason_short": "申请理由至少10个字，认真写的申请我都会看",
+        "apply_submitted": "申请已提交 ✅ 审核通过后即可登录（通常1天内）",
         "switch_lang": "English",
     },
     "en": {
@@ -141,17 +178,26 @@ LANG = {
         "login_btn": "Sign In",
         "login_register_hint": "New here?",
         "login_register_link": "Create account →",
-        "register_title": "Create Your Graph",
+        "register_title": "Apply for KnowNet",
         "register_username": "Username",
-        "register_password": "Password (6-16 chars, letters+numbers)",
+        "register_password": "Password (6-16 chars, letters+digits)",
         "register_password2": "Confirm password",
-        "register_btn": "Sign Up",
+        "register_btn": "Submit Application",
         "register_login_hint": "Already have an account?",
+        "apply_hook": "KnowNet is in limited beta. Tell me who you are and why you need it — I read every serious application.",
+        "apply_reason": "Why do you need it? (at least 10 characters)",
+        "apply_source": "How did you hear about us? (optional)",
+        "apply_after": "You can log in after approval, usually within 1 day.",
         "register_login_link": "Sign In",
         "admin_title": "Admin Panel",
         "admin_back": "← Back",
         "admin_logout": "Logout",
         "admin_users": "👥 Users",
+        "admin_applications": "📋 Pending Applications",
+        "admin_appl_pending": "Pending",
+        "admin_appl_approve": "Approve",
+        "admin_appl_reject": "Reject",
+        "admin_appl_empty": "No pending applications",
         "admin_create": "+ Create User",
         "admin_create_title": "Create User",
         "admin_create_user": "Username",
@@ -189,7 +235,10 @@ LANG = {
         "err_password_mismatch": "Passwords don't match",
         "err_user_exists": "Username already taken",
         "err_login": "Invalid username or password",
+        "err_login_locked": "Too many attempts. Locked, try again in {m} minutes",
         "err_empty_username": "Please enter username",
+        "err_reason_short": "Application reason needs at least 10 characters. Serious applications get reviewed",
+        "apply_submitted": "Application submitted ✅ You can log in after approval (usually within 1 day)",
         "switch_lang": "中文",
     }
 }
@@ -227,17 +276,20 @@ def _T(key, *args):
 
 # ==================== Auth ====================
 
+from werkzeug.security import generate_password_hash, check_password_hash as _wk_check
+
 def hash_password(pwd):
-    salt = secrets.token_hex(8)
-    h = hashlib.sha256(f"{salt}:{pwd}".encode()).hexdigest()
-    return f"{salt}:{h}"
+    """werkzeug scrypt 哈希（抗GPU爆破）"""
+    return generate_password_hash(pwd)
 
 def check_password(pwd, stored):
-    try:
-        salt, h = stored.split(":")
-        return hashlib.sha256(f"{salt}:{pwd}".encode()).hexdigest() == h
-    except:
-        return False
+    """校验密码；兼容旧版 SHA256+salt 格式，命中后自动升级为 scrypt"""
+    if stored and ":" in stored and len(stored.split(":")) == 2 and not stored.startswith(("scrypt:", "pbkdf2:")):
+        # 旧格式 salt:sha256hex
+        salt, h = stored.split(":", 1)
+        if hashlib.sha256(f"{salt}:{pwd}".encode()).hexdigest() == h:
+            return True  # 下次登录时由调用方升级
+    return _wk_check(stored, pwd)
 
 def login_required(f):
     @wraps(f)
@@ -294,7 +346,7 @@ def close_db(exception):
                 db.close()
 
 def init_main_db():
-    """初始化主数据库（用户表）"""
+    """初始化主数据库（用户表 + 申请表）"""
     db = sqlite3.connect(MAIN_DB)
     db.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -305,6 +357,18 @@ def init_main_db():
             is_active INTEGER DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_login TIMESTAMP
+        )
+    """)
+    # 申请制：开放注册改为申请-审核（防 API Key 被刷）
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS applications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            password_hash TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            source TEXT DEFAULT '',
+            status INTEGER DEFAULT 0,  -- 0待审 1通过 2拒绝
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
     db.commit()
@@ -525,6 +589,31 @@ def auto_link_by_tags(person_id):
 def index():
     return render_template("index.html")
 
+# 登录失败计数（内存级，防爆破；重启清零可接受）
+_login_fails = {}  # key: username|ip -> [count, lock_until_ts]
+
+def _login_lock_key(username):
+    return f"{username}|{request.remote_addr}"
+
+def _check_locked(username):
+    key = _login_lock_key(username)
+    rec = _login_fails.get(key)
+    if rec and rec[1] > time.time():
+        return int(rec[1] - time.time())
+    return 0
+
+def _record_fail(username):
+    key = _login_lock_key(username)
+    rec = _login_fails.get(key, [0, 0])
+    rec[0] += 1
+    if rec[0] >= 5:
+        rec[1] = time.time() + 900  # 5次失败锁15分钟
+        rec[0] = 0
+    _login_fails[key] = rec
+
+def _clear_fails(username):
+    _login_fails.pop(_login_lock_key(username), None)
+
 @app.route("/login", methods=["GET", "POST"])
 def login_page():
     if request.method == "POST":
@@ -533,12 +622,22 @@ def login_page():
         if not username:
             return render_template("login.html", error=_T("err_empty_username"))
 
+        locked = _check_locked(username)
+        if locked > 0:
+            return render_template("login.html", error=_T("err_login_locked").format(m=locked // 60 + 1))
+
         admin_db = get_admin_db()
         user = admin_db.execute(
             "SELECT * FROM users WHERE username=? AND is_active=1", (username,)
         ).fetchone()
 
         if user and check_password(pwd, user["password_hash"]):
+            # 旧哈希命中后自动升级为 scrypt
+            if user["password_hash"] and ":" in user["password_hash"] and not user["password_hash"].startswith(("scrypt:", "pbkdf2:")):
+                admin_db.execute("UPDATE users SET password_hash=? WHERE id=?",
+                                 (hash_password(pwd), user["id"]))
+                admin_db.commit()
+            _clear_fails(username)
             session["user_id"] = user["id"]
             session["username"] = user["username"]
             session["is_admin"] = bool(user["is_admin"])
@@ -549,6 +648,7 @@ def login_page():
                 return redirect(url_for("admin_panel"))
             return redirect(url_for("index"))
 
+        _record_fail(username)
         return render_template("login.html", error=_T("err_login"))
 
     return render_template("login.html")
@@ -560,10 +660,13 @@ def logout():
 
 @app.route("/register", methods=["GET", "POST"])
 def register_page():
+    """申请制：提交申请 → 管理员审核 → 通过后登录（不自动登录，防 API Key 被刷）"""
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         pwd = request.form.get("password", "")
         pwd2 = request.form.get("password2", "")
+        reason = request.form.get("reason", "").strip()
+        source = request.form.get("source", "").strip()
 
         # 前端校验的二次确认（防绕过）
         if not username or len(username) < 2:
@@ -578,24 +681,27 @@ def register_page():
             return render_template("register.html", error=_T("err_password_complex"))
         if pwd != pwd2:
             return render_template("register.html", error=_T("err_password_mismatch"))
+        if len(reason) < 10:
+            return render_template("register.html", error=_T("err_reason_short"))
 
         admin_db = get_admin_db()
         exists = admin_db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
         if exists:
             return render_template("register.html", error=_T("err_user_exists"))
+        # 用户名已被申请/待审也拒绝（防重复提交）
+        pending = admin_db.execute(
+            "SELECT id FROM applications WHERE username=? AND status=0", (username,)
+        ).fetchone()
+        if pending:
+            return render_template("register.html", error=_T("err_user_exists"))
 
-        admin_db.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
-                        (username, hash_password(pwd)))
+        admin_db.execute(
+            "INSERT INTO applications (username, password_hash, reason, source) VALUES (?, ?, ?, ?)",
+            (username, hash_password(pwd), reason, source))
         admin_db.commit()
 
-        uid = admin_db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()["id"]
-        session["user_id"] = uid
-        session["username"] = username
-        session["is_admin"] = False
-        admin_db.execute("UPDATE users SET last_login=CURRENT_TIMESTAMP WHERE id=?", (uid,))
-        admin_db.commit()
-
-        return redirect(url_for("index"))
+        # 申请提交成功：不自动登录，提示等待审核
+        return render_template("register.html", ok=_T("apply_submitted"))
 
     return render_template("register.html")
 
@@ -736,15 +842,19 @@ def api_find_path(a, b):
     from collections import deque
     visited = {a}
     parent = {a: None}
+    depth_map = {a: 0}
     queue = deque([a])
     found = False
 
     while queue and not found:
         node = queue.popleft()
+        if depth_map[node] >= max_depth:
+            continue  # 超过6层不再扩展（防全图遍历吃内存）
         for neighbor in adj.get(node, set()):
             if neighbor not in visited:
                 visited.add(neighbor)
                 parent[neighbor] = node
+                depth_map[neighbor] = depth_map[node] + 1
                 queue.append(neighbor)
                 if neighbor == b:
                     found = True
@@ -826,6 +936,53 @@ def api_admin_users():
 
     return jsonify({"code": 0, "data": result})
 
+@app.route("/api/admin/applications", methods=["GET"])
+@login_required
+@admin_required
+def api_admin_applications():
+    """待审核/已处理申请列表"""
+    status = request.args.get("status", 0, type=int)
+    db = get_admin_db()
+    rows = db.execute(
+        "SELECT id, username, reason, source, status, created_at FROM applications WHERE status=? ORDER BY created_at DESC",
+        (status,)).fetchall()
+    return jsonify({"code": 0, "data": [dict(r) for r in rows]})
+
+@app.route("/api/admin/application/<int:aid>/approve", methods=["POST"])
+@login_required
+@admin_required
+def api_admin_approve_application(aid):
+    """通过申请：applications → users（搬数据 + 建独立库）"""
+    db = get_admin_db()
+    app_row = db.execute("SELECT * FROM applications WHERE id=? AND status=0", (aid,)).fetchone()
+    if not app_row:
+        return jsonify({"code": 404, "msg": "申请不存在或已处理"})
+    exists = db.execute("SELECT id FROM users WHERE username=?", (app_row["username"],)).fetchone()
+    if exists:
+        db.execute("UPDATE applications SET status=2 WHERE id=?", (aid,))
+        db.commit()
+        return jsonify({"code": 400, "msg": "用户名已存在，申请已拒绝"})
+
+    cur = db.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                     (app_row["username"], app_row["password_hash"]))
+    uid = cur.lastrowid
+    db.execute("UPDATE applications SET status=1 WHERE id=?", (aid,))
+    db.commit()
+    db.close()
+
+    # 用户独立库懒创建（首次登录时 get_db 自动建 schema），此处无需预建
+    return jsonify({"code": 0, "msg": "已通过并创建账号", "data": {"uid": uid}})
+
+@app.route("/api/admin/application/<int:aid>/reject", methods=["POST"])
+@login_required
+@admin_required
+def api_admin_reject_application(aid):
+    """拒绝申请"""
+    db = get_admin_db()
+    db.execute("UPDATE applications SET status=2 WHERE id=? AND status=0", (aid,))
+    db.commit()
+    return jsonify({"code": 0, "msg": "已拒绝"})
+
 @app.route("/api/admin/user", methods=["POST"])
 @login_required
 @admin_required
@@ -836,8 +993,8 @@ def api_admin_create_user():
 
     if not username or len(username) < 2:
         return jsonify({"code": 400, "msg": "用户名至少2个字符"})
-    if not password or len(password) < 4:
-        return jsonify({"code": 400, "msg": "密码至少4个字符"})
+    if len(password) < 6 or len(password) > 16 or not re.search(r'[a-zA-Z]', password) or not re.search(r'[0-9]', password):
+        return jsonify({"code": 400, "msg": "密码需6-16位且含字母和数字"})
 
     db = get_admin_db()
     exists = db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
@@ -874,8 +1031,8 @@ def api_admin_toggle_user(uid):
 def api_admin_reset_password(uid):
     """重置用户密码"""
     new_pwd = request.json.get("password", "").strip()
-    if len(new_pwd) < 4:
-        return jsonify({"code": 400, "msg": "密码至少4个字符"})
+    if len(new_pwd) < 6 or len(new_pwd) > 16 or not re.search(r'[a-zA-Z]', new_pwd) or not re.search(r'[0-9]', new_pwd):
+        return jsonify({"code": 400, "msg": "密码需6-16位且含字母和数字"})
 
     db = get_admin_db()
     db.execute("UPDATE users SET password_hash=? WHERE id=?", (hash_password(new_pwd), uid))
