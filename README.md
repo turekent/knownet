@@ -70,7 +70,7 @@ pip install -r requirements.txt
 # DeepSeek key (text extraction)
 echo "sk-your-deepseek-key" > ~/.ds_key
 
-# Zhipu key is configured in app.py (line 18) — or set as env var:
+# Zhipu key (image OCR) — set as env var, never commit to repo:
 export ZHIPU_KEY="your-zhipu-key"
 ```
 
