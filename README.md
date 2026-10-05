@@ -202,6 +202,6 @@ python app.py
 
 ### 作者
 
-[@负重进化论](https://mp.weixin.qq.com/) — 某央企管理者，23 年产业经验。KnowNet 是我自己用了两周、确认离不开之后，决定开源出来的工具。
+[@负重进化论](https://mp.weixin.qq.com/s/U4dHwKPWzwfgwgrEovQVVw) — 某央企管理者，23 年产业经验。KnowNet 是我自己用了两周、确认离不开之后，决定开源出来的工具。
 
-有问题？提 Issue。想交流？公众号《负重进化论》后台留言。
+有问题？提 Issue。想交流？公众号[《负重进化论》](https://mp.weixin.qq.com/s/U4dHwKPWzwfgwgrEovQVVw)后台留言。
