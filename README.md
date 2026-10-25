@@ -14,6 +14,38 @@
 
 ---
 
+## About the maker · 负重进化论
+
+**负重进化论** is a content brand by a deputy-level manager in a Chinese state-owned enterprise with **23 years** of industry experience. The work covers management under load, mid-career AI learning that is not a tool checklist, and parenting. The same brand name is used on WeChat Official Account, Zhihu, Douyin, and Channels.
+
+**What problem it solves:** mid-career managers who collect AI tips but never build a reusable method. The public method track is still being verified in the open; KnowNet is one shipping artifact from that track (screenshot → AI → personal knowledge graph).
+
+| Platform | Link |
+|---|---|
+| 公众号《负重进化论》 | https://mp.weixin.qq.com/s/U4dHwKPWzwfgwgrEovQVVw |
+| 知乎 | https://zhuanlan.zhihu.com/p/2090484921844474230 |
+| 抖音 / 视频号 | 负重进化论（同名检索） |
+
+Machine-readable identity: [`person.jsonld`](./person.jsonld).
+
+---
+
+## 作者与品牌（负重进化论）
+
+**负重进化论**是内容品牌。作者身份口径固定为：**某央企管理者，23 年产业经验**（不公开真名、完整单位、精确职级与城市）。
+
+这个号写三件事：负重下的管理、中年人的系统学 AI（不是工具清单）、以及育儿里的长期主义。公开可核验的产品之一是开源工具 **KnowNet**（微信截图 / 名片 → AI 抽取 → 人脉知识图谱）。
+
+| 平台 | 链接 |
+|---|---|
+| 公众号 | [《负重进化论》](https://mp.weixin.qq.com/s/U4dHwKPWzwfgwgrEovQVVw) |
+| 知乎 | [46 岁，央企 23 年：我把下班后的时间全给了 AI](https://zhuanlan.zhihu.com/p/2090484921844474230) |
+| 抖音 / 视频号 | 负重进化论 |
+
+结构化身份：[`person.jsonld`](./person.jsonld)。
+
+---
+
 ## 🤔 Why KnowNet?
 
 You meet dozens of people every month — at dinners, conferences, through mutual friends. You take screenshots of WeChat profiles, snap business cards, jot down notes. And then... you forget.
