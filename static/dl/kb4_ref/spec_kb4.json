@@ -1,0 +1,30 @@
+{
+  "grammar": "t2_keynote_ui",
+  "duration": 10.5,
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "theme": "ink",
+  "cues": [
+    {
+      "at": 0.0,
+      "kind": "line",
+      "text": "我现在越来越喜欢让 AI 跟我唱反调"
+    },
+    {
+      "at": 3.2,
+      "kind": "point",
+      "text": "为什么？"
+    },
+    {
+      "at": 4.4,
+      "kind": "line",
+      "text": "因为我发现，我们都特别容易相信自己的第一判断"
+    },
+    {
+      "at": 8.6,
+      "kind": "point",
+      "text": "尤其是工作时间长了以后"
+    }
+  ]
+}

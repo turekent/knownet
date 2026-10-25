@@ -2,7 +2,7 @@
 """人脉知识图谱 v2.0 — 多用户 + 管理后台"""
 import os, json, uuid, base64, datetime, sqlite3, re, urllib.request, hashlib, secrets, time
 from functools import wraps
-from flask import Flask, request, jsonify, render_template, g, session, redirect, url_for
+from flask import Flask, request, jsonify, render_template, g, session, redirect, url_for, send_from_directory
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 MAIN_DB = os.path.join(APP_ROOT, "knownet.db")
@@ -584,6 +584,61 @@ def auto_link_by_tags(person_id):
 
 # ==================== User Routes ====================
 
+MAIL_FORM_HTML = """<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>邮箱配置（一次性）</title>
+<style>body{font-family:-apple-system,"PingFang SC",sans-serif;background:#0f1720;color:#e6edf3;padding:18px;
+line-height:1.7;max-width:640px;margin:0 auto}h3{margin:0 0 6px}
+label{display:block;margin:14px 0 4px;font-size:14px;color:#c9d6e2}
+input{width:100%;padding:11px;background:#0d141c;color:#fff;border:1px solid #22303f;border-radius:8px;font-size:16px}
+button{margin-top:18px;width:100%;padding:13px;background:#2f81f7;color:#fff;border:0;border-radius:9px;
+font-size:16px;font-weight:700}.muted{color:#8b98a5;font-size:13px}.card{background:#161f2b;border:1px solid #22303f;
+border-radius:12px;padding:14px;margin:12px 0}</style></head><body>
+<h3>邮箱配置</h3>
+<div class="muted">填完点保存，值会直接写进服务器保险箱（600 权限），<b>链接随即失效</b>。</div>
+<div class="card"><div class="muted">MAIL_PASS 填<b>授权码/应用专用密码</b>，不是登录密码。<br>
+163: imap.163.com / smtp.163.com　QQ: imap.qq.com / smtp.qq.com　企业邮: imap.exmail.qq.com</div></div>
+<form method="post">{rows}
+<div class="muted" style="margin-top:10px">MAIL_MODE 先填 read（只读）。</div>
+<button>保存</button></form></body></html>"""
+
+
+@app.route("/setmail/<token>", methods=["GET", "POST"])
+def setmail(token):
+    """一次性邮箱配置表单：值直写 ~/.hermes/secure/mail.env（600），不进聊天、不落日志。"""
+    import json as _json, pathlib as _pl, os as _os, time as _t
+    SEC = _pl.Path("/home/ubuntu/.hermes/secure")
+    FORM, ENV = SEC / "mail_form.json", SEC / "mail.env"
+    FIELDS = ["MAIL_ADDRESS", "IMAP_HOST", "IMAP_PORT", "SMTP_HOST", "SMTP_PORT",
+              "MAIL_USER", "MAIL_PASS", "MAIL_MODE", "WATCH_FROM", "WATCH_KEYWORDS"]
+    try:
+        st = _json.loads(FORM.read_text(encoding="utf-8"))
+    except Exception:
+        return "链接无效", 404
+    if st.get("token") != token or st.get("used"):
+        return "链接已失效或已使用过", 410
+    if _t.time() - int(st.get("created", 0)) > 7200:
+        return "链接已过期（超过 2 小时），让 Hermes 重新生成", 410
+    if request.method == "GET":
+        rows = ""
+        for k in FIELDS:
+            it = "password" if k == "MAIL_PASS" else "text"
+            rows += f'<label>{k}</label><input name="{k}" type="{it}" autocomplete="off" spellcheck="false">'
+        return MAIL_FORM_HTML.replace("{rows}", rows)
+    vals = {k: (request.form.get(k) or "").strip() for k in FIELDS}
+    if not vals["MAIL_ADDRESS"] or not vals["MAIL_PASS"]:
+        return "邮箱地址和授权码必填（返回上一页补上）", 400
+    lines = ["# 由一次性表单写入 " + _t.strftime("%Y-%m-%d %H:%M", _t.localtime()), ""]
+    lines += [f"{k}={vals[k]}" for k in FIELDS if vals[k]]
+    ENV.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    _os.chmod(ENV, 0o600)
+    st["used"] = True
+    FORM.write_text(_json.dumps(st), encoding="utf-8")
+    _os.chmod(FORM, 0o600)
+    return ('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            '<body style="font-family:sans-serif;background:#0f1720;color:#e6edf3;padding:24px">'
+            '<h3>已保存 ✓</h3><p style="color:#8b98a5">可以关掉这个页面了，链接已经失效。</p>')
+
+
 @app.route("/")
 @login_required
 def index():
@@ -613,6 +668,16 @@ def _record_fail(username):
 
 def _clear_fails(username):
     _login_fails.pop(_login_lock_key(username), None)
+
+@app.route("/robots.txt")
+def robots_txt():
+    return send_from_directory("static", "robots.txt", mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    return send_from_directory("static", "sitemap.xml", mimetype="application/xml")
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login_page():

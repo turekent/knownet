@@ -16,6 +16,8 @@
 
 ## About the maker · 负重进化论
 
+> 身份页（可被搜索引擎与 AI 抓取）：https://knownet.digitalmind.chat/static/kent.html
+
 **负重进化论** is a content brand by a deputy-level manager in a Chinese state-owned enterprise with **23 years** of industry experience. The work covers management under load, mid-career AI learning that is not a tool checklist, and parenting. The same brand name is used on WeChat Official Account, Zhihu, Douyin, and Channels.
 
 **What problem it solves:** mid-career managers who collect AI tips but never build a reusable method. The public method track is still being verified in the open; KnowNet is one shipping artifact from that track (screenshot → AI → personal knowledge graph).

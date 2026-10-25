@@ -1,0 +1,119 @@
+{
+  "edl_version": "1.0",
+  "kind": "clips",
+  "episode": "ep02",
+  "title": "不是AI不行，是你没想清楚",
+  "source": "kb2_sentence_recut_v6.mp4",
+  "status": "draft",
+  "owner": "rio",
+  "created": "2026-10-14",
+  "principle": "从源头选段：切的时候就选'自己就是一个完整小故事'的窗口。片头卡不是补救手段——选段选对了就不需要它。",
+  "rules": {
+    "min_len": 15,
+    "max_len": 45,
+    "short_punch_ok": [12, 15],
+    "head_forbidden": ["那后来", "所以现在", "这其实也是", "这个时候", "然后我又接着", "是的"],
+    "must_start_standalone": true,
+    "must_end_on_complete_sentence": true,
+    "must_have_progression": true,
+    "progression_types": ["问题→追问→答案", "现象→反常识→结论", "做法→结果→金句"],
+    "brand_card": "tail_optional_1.5s",
+    "no_head_card": true
+  },
+  "clips": [
+    {
+      "id": "c01", "title": "假大空套话没用",
+      "start_sentence": "前一天我有个朋友，他找我帮忙做一个实施方案",
+      "end_sentence": "但就是假大空的套话，一点用都没有",
+      "progression": "问题→追问→答案",
+      "v6_start": null, "v6_end": null, "duration": null,
+      "first_sentence_verbatim": null, "last_sentence_verbatim": null,
+      "self_check": {"standalone_first_sentence": null, "ends_on_complete_sentence": null, "has_progression": null, "in_range": null},
+      "publish_copy": null, "render": {"file": null, "sha256": null, "duration_ffprobe": null},
+      "note": "旧版结尾切在半句「假大空的套话，」——必须延到「一点用都没有。」"
+    },
+    {
+      "id": "c02", "title": "自己都没想明白",
+      "start_sentence": "你做这件事情的目的是什么？",
+      "end_sentence": "因为我自己都没有想明白",
+      "progression": "问题→追问→答案",
+      "v6_start": null, "v6_end": null, "duration": null,
+      "first_sentence_verbatim": null, "last_sentence_verbatim": null,
+      "self_check": {"standalone_first_sentence": null, "ends_on_complete_sentence": null, "has_progression": null, "in_range": null},
+      "publish_copy": null, "render": {"file": null, "sha256": null, "duration_ffprobe": null},
+      "note": "旧版从「那后来我就开始问他」起（承接词）——改从第一个提问起，提问本身就是开场。约 36s。"
+    },
+    {
+      "id": "c03", "title": "答案再漂亮也没意义",
+      "start_sentence": "以前我们做工作，很多时候遇到问题，我们就会马上去找资料、找模板、找专家",
+      "end_sentence": "问题如果我们没有定义清楚，这个答案再漂亮也没有意义",
+      "progression": "现象→反常识→结论",
+      "v6_start": null, "v6_end": null, "duration": null,
+      "first_sentence_verbatim": null, "last_sentence_verbatim": null,
+      "self_check": {"standalone_first_sentence": null, "ends_on_complete_sentence": null, "has_progression": null, "in_range": null},
+      "publish_copy": null, "render": {"file": null, "sha256": null, "duration_ffprobe": null},
+      "note": "起止重新对齐完整句边界。约 20s。"
+    },
+    {
+      "id": "c04", "title": "苏格拉底提问法",
+      "start_sentence": "我碰到这种比较重要的问题，我不会马上让 AI 给我答案",
+      "end_sentence": "真正卡住我的问题，其实并不是原来那个问题",
+      "progression": "做法→结果→金句",
+      "v6_start": null, "v6_end": null, "duration": null,
+      "first_sentence_verbatim": null, "last_sentence_verbatim": null,
+      "self_check": {"standalone_first_sentence": null, "ends_on_complete_sentence": null, "has_progression": null, "in_range": null},
+      "publish_copy": null, "render": {"file": null, "sha256": null, "duration_ffprobe": null},
+      "note": "旧版从「所以现在我们已经为自己养成了一个习惯」起——改从「我不会马上让 AI 给我答案」起。约 24s。"
+    },
+    {
+      "id": "c05", "title": "重复过去",
+      "start_sentence": "因为工作的时间越长，经验越多，有时候反而容易凭经验下结论",
+      "end_sentence": "其实我们都以为自己是在判断，但是很多时候我们是在重复过去",
+      "progression": "现象→反常识→结论",
+      "v6_start": null, "v6_end": null, "duration": null,
+      "first_sentence_verbatim": null, "last_sentence_verbatim": null,
+      "self_check": {"standalone_first_sentence": null, "ends_on_complete_sentence": null, "has_progression": null, "in_range": null},
+      "publish_copy": null, "render": {"file": null, "sha256": null, "duration_ffprobe": null},
+      "note": "中间三句例子（以前就这么干了/应该没问题/客户可能不会接受）保留，金句收尾。约 16s。"
+    },
+    {
+      "id": "c06", "title": "好问题更有价值",
+      "start_sentence": "卡住的时候，很多时候不是不会做，而是我们没有想清楚要做什么",
+      "end_sentence": "一个好问题，比十个答案更有价值",
+      "progression": "观点→金句",
+      "v6_start": null, "v6_end": null, "duration": null,
+      "first_sentence_verbatim": null, "last_sentence_verbatim": null,
+      "self_check": {"standalone_first_sentence": null, "ends_on_complete_sentence": null, "has_progression": null, "in_range": null},
+      "publish_copy": null, "render": {"file": null, "sha256": null, "duration_ffprobe": null},
+      "note": "旧版从「所以我现在越来越相信一句话」起——改从「卡住的时候…」起；并删掉「工作了20多年/重新发现自己」那段口号（留给主片）。约 18s。"
+    },
+    {
+      "id": "c07", "title": "一点一点逼出来",
+      "start_sentence": "我以前总觉得，它最大的价值是它帮我做",
+      "end_sentence": "它能把我脑子里那些模糊的东西，一点一点逼出来",
+      "progression": "观点→反转",
+      "v6_start": null, "v6_end": null, "duration": null,
+      "first_sentence_verbatim": null, "last_sentence_verbatim": null,
+      "self_check": {"standalone_first_sentence": null, "ends_on_complete_sentence": null, "has_progression": null, "in_range": null},
+      "publish_copy": null, "render": {"file": null, "sha256": null, "duration_ffprobe": null},
+      "note": "旧版从「这其实也是我为什么现在越来越」起——改从「我以前总觉得…」起。约 13–17s（属短句条，可加「这对工作了20多年的人其实是特别重要的」再收一句）。"
+    },
+    {
+      "id": "c08", "title": "脑子倒出来",
+      "start_sentence": "它像一个不懂人情世故、但特别爱问问题的年轻小伙子",
+      "end_sentence": "它并没有耽误你的工作，它是帮你把脑子里面的东西倒出来",
+      "progression": "比喻→结论",
+      "v6_start": null, "v6_end": null, "duration": null,
+      "first_sentence_verbatim": null, "last_sentence_verbatim": null,
+      "self_check": {"standalone_first_sentence": null, "ends_on_complete_sentence": null, "has_progression": null, "in_range": null},
+      "publish_copy": null, "render": {"file": null, "sha256": null, "duration_ffprobe": null},
+      "note": "旧版断在「…就很像一个不」的「不」字上——必须改从「它像一个…」起。约 20s。"
+    }
+  ],
+  "delivery": {
+    "must_report": ["first_sentence_verbatim", "last_sentence_verbatim", "duration", "v6_start", "v6_end", "sha256"],
+    "verify_rule": "只认实测。文件时长、sha256 由交片方给出后，接收方独立复测；不一致以复测为准。若复测时长与申报相差 >0.05s 或 sha256 不符，视为未交付。",
+    "forbidden": ["片头卡", "用卡片遮住承接词或半句"],
+    "allowed": ["结尾 1.5s 真字品牌卡（要或不要由用户定）"]
+  }
+}

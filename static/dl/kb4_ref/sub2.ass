@@ -1,0 +1,15 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 720
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Sub,WenQuanYi Zen Hei,44,&H00FFFFFF,&H00000000,&H80000000,0,2,0,2,90,90,46,1
+
+[Events]
+Format: Layer, Start, End, Style, Text
+Dialogue: 0,0:00:00.00,0:00:03.20,Sub,我现在越来越喜欢让 AI 跟我唱反调
+Dialogue: 0,0:00:03.20,0:00:04.40,Sub,为什么？
+Dialogue: 0,0:00:04.40,0:00:08.60,Sub,因为我发现，我们都特别容易相信自己的第一判断
+Dialogue: 0,0:00:08.60,0:00:10.50,Sub,尤其是工作时间长了以后

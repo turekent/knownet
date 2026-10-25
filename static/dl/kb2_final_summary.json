@@ -1,0 +1,30 @@
+{
+ "video": "kb2_final.mp4",
+ "person_scale": {
+  "x": 0.4102,
+  "y": 0.4102
+ },
+ "person_bbox": {
+  "w": 361,
+  "h": 361
+ },
+ "person_src_aspect": 1.0,
+ "subtitle": {
+  "fg": [
+   255,
+   255,
+   255
+  ],
+  "outline_px": 3
+ },
+ "bg": {
+  "sha16": "eb33119723889452"
+ },
+ "spec": {
+  "w": 1280,
+  "h": 720,
+  "fps": 30,
+  "frames": 5123,
+  "duration": 170.788
+ }
+}

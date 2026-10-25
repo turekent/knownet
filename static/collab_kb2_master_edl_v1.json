@@ -1,0 +1,131 @@
+{
+  "edl_version": "1.0",
+  "kind": "master",
+  "episode": "ep02",
+  "title": "不是AI不行，是你没想清楚",
+  "source_file": "kb2_sentence_recut_v6.mp4",
+  "file_sha256": null,
+  "measured_by": "hermes",
+  "measured_at": "2026-10-14",
+  "status": "measured",
+  "note": "本表只填实测值。没量到的一律写 null 并进 open_items，不许用交片方自报数充数。",
+
+  "file": {
+    "duration_s": 227.638,
+    "size_bytes": 23418414,
+    "bitrate_kbps": 823.0,
+    "width": 1280,
+    "height": 720,
+    "fps": 30.0,
+    "nb_frames": 6829,
+    "vcodec": "h264/High",
+    "pix_fmt": "yuv420p",
+    "audio": {"codec": "aac", "sample_rate": 44100, "channels": 2, "bitrate_kbps": 114.3},
+    "faststart": true
+  },
+
+  "layers": [
+    {
+      "name": "background",
+      "order": 1,
+      "rule": "整幅背景（卡片/插画/实拍/图表面板），不许纯色垫底",
+      "measured": {"暗底页占比": 0.343, "暗色像素占比": 0.192, "上限": 0.40, "判定": "达标"}
+    },
+    {
+      "name": "person",
+      "order": 2,
+      "rule": "人物压背景之上：右下角圆形窗口；头部露在圆的上边缘之上，肩膀在圆内；无白边、无红框、无空半圆底",
+      "measured": {
+        "光斑整体_含露头": {"cx": 924.7, "cy": 565.2, "宽": 313.0, "高": 304.0},
+        "采样帧数": 14,
+        "status": "近似值待精测",
+        "why_not_exact": "圆窗无描边，只有内容不连续；按亮块外接框量到的是「头+圆」整体。精测方法：逐行宽度剖面的最大宽行=圆心行，且需排除底部字幕带与白底卡。"
+      }
+    },
+    {
+      "name": "subtitle",
+      "order": 3,
+      "rule": "底部一条口播字幕：白字 + 深色描边，居中，口播原话一字不改",
+      "measured": {
+        "字高_px": 21.5,
+        "字高范围_px": [21.0, 26.0],
+        "文字带_y": [617, 643],
+        "距画面底_px": 77,
+        "采样帧数": 14,
+        "方法": "tesseract 词框（全尺寸 1280×720，底部带）"
+      },
+      "baseline_ref": {
+        "file": "https://knownet.digitalmind.chat/static/dl/kb2_ref10.mp4",
+        "字高_px": 41.0,
+        "文字带_y": [660, 701],
+        "距画面底_px": 19,
+        "方法": "同一方法与同一裁切，可直接比较"
+      }
+    }
+  ],
+
+  "measured": {
+    "visual_events": 54,
+    "avg_gap_s": 4.22,
+    "max_gap_s": 18.5,
+    "gap_threshold": 6.0,
+    "first_cuts_s": [4.5, 6.5, 9.0, 12.5, 22.0, 25.5, 30.0, 32.0, 37.5, 42.0, 47.5, 61.5],
+    "audio_gaps_ge_0.9s": [[21.79, 22.7], [77.3, 78.26], [104.57, 105.55], [214.69, 227.65]],
+    "audio_gap_note": "前三个是正常换气停顿。最后一个 214.69→227.65（12.96s）是结尾落版段，实测该段峰值音量 ≈ -51dB，等于没有声音。",
+    "fps_sampled": 2.0,
+    "frames_sampled": 455
+  },
+
+  "deviations": [
+    {
+      "item": "底部字幕字号",
+      "spec": "约 44px（参考片同法实测字形框 41px）",
+      "actual": "字形框 21.5px",
+      "judgement": "偏小约一半；且位置更高（距底 77px vs 参考 19px）",
+      "impact": "母版、8 条切片全部继承这个字号",
+      "needs": "用户已确认，记为下一版修改项（V6 已发出，下一版执行）",
+      "next_action": "底部字幕按 44px 口径重出（同法实测字形框须≈41px），位置下移到距底 ≈19–32px；母版与 8 条切片同步",
+      "status": "已记录·待执行"
+    },
+    {
+      "item": "结尾 12.96 秒无声音",
+      "spec": "结尾落版段建议配乐或收一句人声",
+      "actual": "峰值 ≈ -51dB（等于静音）",
+      "judgement": "落版 13 秒全静音，观众体感是「断了」",
+      "needs": "用户已确认，记为下一版修改项（V6 已发出，下一版执行）",
+      "next_action": "结尾落版段补轻音乐，或把 12.96s 缩短到 ≤5s（二选一，等用户定）",
+      "status": "已记录·待执行"
+    }
+  ],
+
+  "next_changes": [
+    {"id": "N1", "item": "底部字幕字号+位置", "detail": "按 44px 口径重出（同法实测字形框须≈41px），位置下移；母版 + 8 条切片同步", "status": "已记录·待执行"},
+    {"id": "N2", "item": "结尾 12.96s 静音", "detail": "补轻音乐 或 缩短到 ≤5s", "status": "已记录·待执行"},
+    {"id": "N3", "item": "圆窗几何精测", "detail": "待 Rio 提供 build 参数后逐行剖面实测对照（不采信自报）", "status": "待输入"},
+    {"id": "N4", "item": "字幕水平居中核验", "detail": "tesseract 词框与像素法结论不一致", "status": "待核"},
+    {"id": "N5", "item": "file_sha256", "detail": "接收方落定后补", "status": "待核"}
+  ],
+
+  "open_items": [
+    "圆窗几何精确值（圆心/直径/是否切到画面底）——需按 why_not_exact 里的方法精测",
+    "底部字幕是否水平居中（tesseract 词框与像素法结论不一致，需专项核）",
+    "file_sha256（待接收方落定后补）"
+  ],
+
+  "acceptance": {
+    "must": [
+      "1280×720 / 30fps / h264 yuv420p / AAC",
+      "faststart（moov 在文件头）",
+      "暗底页占比 ≤ 40%",
+      "最长视觉空档 ≤ 20s",
+      "底部有一条口播字幕（原话一字不改），与背景文字不重复",
+      "人物在右下圆窗：头露圆外、肩在圆内、无白边无红框无空半圆底"
+    ],
+    "verify_rule": "只认接收方实测。交片方自报的时长/sha256 必须复核；不一致以复核为准。"
+  },
+
+  "reproduce": {
+    "for_next_episode": "本 EDL 是「配方」：新一集照此表逐项对齐，改动的项要在这里改，而不是口头说。",
+    "clips_edl": "https://knownet.digitalmind.chat/static/collab_kb2_clips_edl_v1.json"
+  }
+}

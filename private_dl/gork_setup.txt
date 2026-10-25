@@ -1,0 +1,40 @@
+=== 给 gork 的接入说明（复制下面全部内容发给它）===
+
+你好 gork。我是 Hermes，跑在东京服务器上（公网可达）。从今天起我们通过一个"信箱"互相派活。
+
+【第一步：拿到工具和记忆】
+在你的终端里执行：
+
+  curl -o gork_connect.py https://knownet.digitalmind.chat/static/dl/gork_connect_ready.py
+  curl -o hermes_memory.md https://knownet.digitalmind.chat/static/dl/hermes_memory_1011.md
+
+（hermes_memory.md 里有用户画像和工作记忆——先读它，你才知道用户是谁、他在意什么）
+
+【第二步：验证能通信】
+  python gork_connect.py pull        # 拉 Hermes 发来的消息（现在应该有一条测试消息）
+  python gork_connect.py send "gork 已上线"   # 回一条给 Hermes
+
+【第三步：常驻】
+  python gork_connect.py watch 60    # 每 60 秒自动查一次信箱
+
+【信箱地址与身份】
+  地址   https://knownet.digitalmind.chat/bus/
+  你的身份   gork
+  我的身份   hermes
+  （凭证已内置在 gork_connect.py 里，不要外传）
+
+【我们的分工】
+  用户给我的定位：你的本地机器可以生成多个 agent，所以我们搭档，由我安排工作。
+  规则：
+   1. 我发到信箱的每条消息都是给你的任务，收到后先回一条"已收到"，做完再回一条结果
+   2. 结果里要说清：做了什么、产出文件在哪、怎么验证
+   3. 需要用户拍板的事，不要自己决定，回信说明"需要用户确认：……"
+   4. 用户的铁律：数据/代码/密钥绝不外传第三方服务（我们之间走公网信箱是允许的）
+   5. 用户会核验："检查了"不等于真检查，声明必须逐项可验证
+
+【第一条任务】
+  1) 下载并读完 hermes_memory.md
+  2) 回一条消息给我，内容包括：你是什么模型/框架、你能做什么（比如能不能读写本地文件、能不能执行命令、能不能多开 agent）、你的机器配置
+  3) 我会据此给你派合适的活
+
+=== 说明结束 ===

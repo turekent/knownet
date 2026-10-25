@@ -1,0 +1,194 @@
+"""Hermes 独立反例（不复用交件方 fixture）——每条都断言「该 FAIL 的真 FAIL」。"""
+from __future__ import annotations
+
+import copy
+import json
+import sys
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from layout_engine import (  # noqa: E402
+    LayoutAssertError, Layer, Rect, Scale, assert_a1_uniform_scale,
+    assert_a2_person_subtitle_clearance, assert_a3_text_edit_distance,
+    assert_a4_text_bounds, assert_a5_temporal, assert_all, layout, load_theme,
+)
+
+TP = ROOT / "theme.example.json"
+
+
+def T():
+    return json.loads(TP.read_text(encoding="utf-8"))
+
+
+def L(theme):
+    return layout({"text": "看一下就觉得", "person_src_w": 480, "person_src_h": 640}, t=1.0, theme=theme)
+
+
+def clone(layers):
+    return [Layer(ly.name, ly.z, Rect(ly.rect.x, ly.rect.y, ly.rect.w, ly.rect.h),
+                  Scale(ly.scale.x, ly.scale.y) if ly.scale else None, ly.text,
+                  copy.deepcopy(ly.meta)) for ly in layers]
+
+
+def base_kw(theme, **over):
+    kw = dict(segs_text="看一下就觉得", screen_text="看一下就觉得",
+              frame_hashes_head=["h0", "h1", "h2"], frame_hashes_tail=["t0", "t1", "t2"],
+              audio_dur=10.0, sub_t0=0.0, sub_t1=9.88, theme=theme)
+    kw.update(over)
+    return kw
+
+
+# ---------- 正常路径必须不 raise（防误杀） ----------
+def test_happy_path_clean():
+    th = T()
+    assert_all(L(th), **base_kw(th))
+
+
+# ---------- A1 ----------
+def test_a1_02pct_stretch_must_fail():
+    th = T()
+    ls = clone(L(th))
+    p = next(x for x in ls if x.name == "person")
+    p.scale = Scale(1.0, 1.002)   # 0.2% > 0.1% tol
+    with pytest.raises(LayoutAssertError, match="A1 FAIL"):
+        assert_a1_uniform_scale(ls, th)
+
+
+def test_a1_005pct_within_tol_must_pass():
+    th = T()
+    ls = clone(L(th))
+    p = next(x for x in ls if x.name == "person")
+    p.scale = Scale(1.0, 1.0005)
+    p.meta["src_w"] = p.meta["src_h"] = 100.0
+    p.rect = Rect(0, 0, 100.0, 100.05)
+    assert_a1_uniform_scale(ls, th)   # 目标：容忍 0.05% 浮点误差，不误杀
+
+
+def test_a1_old_place_person_1280x720_aspect():
+    th = T()
+    ls = clone(L(th))
+    p = next(x for x in ls if x.name == "person")
+    p.scale = Scale(1280 / 1280, 520 / 720)  # 旧 bug
+    with pytest.raises(LayoutAssertError, match="A1 FAIL"):
+        assert_a1_uniform_scale(ls, th)
+
+
+# ---------- A2 ----------
+def test_a2_gap_23_9_must_fail():
+    th = T()
+    th["person"]["anchor_x"] = 993.9  # gap = anchor-970 = 23.9 < 24
+    with pytest.raises(LayoutAssertError, match="A2 FAIL"):
+        assert_a2_person_subtitle_clearance(L(th), th)
+
+
+def test_a2_touching_must_fail():
+    th = T()
+    ls = clone(L(th))
+    p = next(x for x in ls if x.name == "person")
+    p.rect = Rect(700, 596, 90, 100)  # 刚好挨上字幕框
+    with pytest.raises(LayoutAssertError, match="A2 FAIL"):
+        assert_a2_person_subtitle_clearance(ls, th)
+
+
+def test_a2_49px_gap_must_pass():
+    th = T()
+    th["person"]["anchor_x"] = 1040 + 25  # 间距 95，明显够
+    assert_a2_person_subtitle_clearance(L(th), th)
+
+
+# ---------- A3 ----------
+@pytest.mark.parametrize("a,b", [
+    ("Python is great", "Pythor is great"),      # 1 替换
+    ("看一下就觉得", "看一下就觉得。"),           # 1 插入
+    ("ABCD", "ABDC"),                            # 转置=距离2
+    ("看一下就觉得", "看一下 就觉得"),            # 空格
+])
+def test_a3_any_edit_must_fail(a, b):
+    with pytest.raises(LayoutAssertError, match="A3 FAIL"):
+        assert_a3_text_edit_distance(segs_text=a, screen_text=b)
+
+
+# ---------- A4 ----------
+def test_a4_exact_edge_ok_and_half_px_over_fails():
+    th = T()
+    ls = clone(L(th))
+    t = next(x for x in ls if x.name == "text")
+    t.rect = Rect(0, 0, 1280, 100)          # 贴边不算出画
+    assert_a4_text_bounds(ls, th)
+    t.rect = Rect(0, 0, 1280.5, 100)        # 0.5px 出画必须 FAIL
+    with pytest.raises(LayoutAssertError, match="A4 FAIL"):
+        assert_a4_text_bounds(ls, th)
+
+
+def test_a4_text_over_decor_must_fail():
+    th = T()
+    ls = clone(L(th))
+    d = next(x for x in ls if x.name == "decor")
+    t = next(x for x in ls if x.name == "text")
+    d.rect = Rect(0, 596, 400, 100)
+    with pytest.raises(LayoutAssertError, match="A4 FAIL"):
+        assert_a4_text_bounds(ls, th)
+
+
+# ---------- A5 ----------
+def test_a5_head_all_same_and_empty_tail():
+    th = T()
+    with pytest.raises(LayoutAssertError, match="A5 FAIL"):
+        assert_a5_temporal(frame_hashes_head=["x", "x"], frame_hashes_tail=["t0", "t1"],
+                           audio_dur=10.0, sub_t0=0.0, sub_t1=9.0, theme=th)
+    with pytest.raises(LayoutAssertError, match="A5 FAIL"):
+        assert_a5_temporal(frame_hashes_head=["h0", "h1"], frame_hashes_tail=[],
+                           audio_dur=10.0, sub_t0=0.0, sub_t1=9.0, theme=th)
+
+
+def test_a5_subtitle_audio_edges():
+    th = T()
+    assert_a5_temporal(frame_hashes_head=["h0", "h1"], frame_hashes_tail=["t0", "t1"],
+                       audio_dur=10.0, sub_t0=0.0, sub_t1=10.0, theme=th)   # 正好等长 OK
+    assert_a5_temporal(frame_hashes_head=["h0", "h1"], frame_hashes_tail=["t0", "t1"],
+                       audio_dur=10.0, sub_t0=0.0, sub_t1=10.0005, theme=th)  # eps 内 OK
+    with pytest.raises(LayoutAssertError, match="A5 FAIL"):
+        assert_a5_temporal(frame_hashes_head=["h0", "h1"], frame_hashes_tail=["t0", "t1"],
+                           audio_dur=10.0, sub_t0=0.0, sub_t1=10.01, theme=th)
+
+
+# ---------- theme / ZStack ----------
+def test_theme_z_conflict_must_fail():
+    th = T()
+    th["z"]["person"] = 3
+    with pytest.raises(LayoutAssertError, match="z\\[|z"):
+        layout({"text": "x"}, 0.0, th)
+
+
+def test_theme_canvas_1080p_must_fail():
+    th = T()
+    th["canvas"] = {"w": 1920, "h": 1080}
+    with pytest.raises(LayoutAssertError, match="canvas"):
+        layout({"text": "x"}, 0.0, th)
+
+
+# ---------- 真用例：旧「整帧 1280x720 人像」必须被 A2 拦住 ----------
+def test_old_fullframe_person_blocked_by_a2():
+    th = T()
+    ls = layout({"text": "看一下就觉得", "person_src_w": 1280, "person_src_h": 720}, t=0.0, theme=th)
+    with pytest.raises(LayoutAssertError, match="A2 FAIL"):
+        assert_a2_person_subtitle_clearance(ls, th)
+
+
+# ---------- 已知缺口（记录为软项，不阻断） ----------
+def test_gap_known_no_safe_area_check_for_screen_box():
+    """记录缺口：seg.screen_box 若给 0..1280 仍 PASS，theme.typography.safe_* 未被强制。"""
+    th = T()
+    ls = layout({"text": "x", "screen_box": {"x": 0, "y": 0, "w": 1280, "h": 120}}, 0.0, th)
+    assert_a4_text_bounds(ls, th)  # 当前会通过 —— 说明安全区未入断言
+
+
+def test_gap_person_vertical_crop_unchecked():
+    """记录缺口：人像 y2=800 > 720（裁到画外）当前无断言（竖切可接受，但未被声明）。"""
+    th = T()
+    p = next(x for x in L(th) if x.name == "person")
+    assert p.rect.y2 > 720

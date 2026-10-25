@@ -1,0 +1,116 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{width:1600px;height:1000px;font-family:"Noto Sans CJK SC","Source Han Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+       background:#F5F7FA;color:#1E3A5F;padding:34px 40px}
+  h1{font-size:29px;letter-spacing:.5px}
+  .sub{font-size:14px;color:#5b7288;margin-top:6px}
+  .row{display:flex;gap:14px;align-items:stretch}
+  .card{background:#fff;border:1px solid #DCE5EE;border-radius:12px;padding:14px 16px;box-shadow:0 1px 3px rgba(30,58,95,.05)}
+  .t{font-size:15px;font-weight:700;margin-bottom:9px;display:flex;align-items:center;gap:7px}
+  .dot{width:9px;height:9px;border-radius:50%;background:#2F6FED;flex:0 0 auto}
+  .muted{font-size:12.5px;color:#5b7288;line-height:1.65}
+  .chip{display:inline-block;background:#EEF4FF;color:#1E4F9C;border:1px solid #CFE0FF;border-radius:999px;
+        padding:3px 10px;font-size:12.5px;margin:3px 5px 0 0;white-space:nowrap}
+  .arrow{display:flex;align-items:center;justify-content:center;color:#9DB3CC;font-size:20px;flex:0 0 26px}
+  .band{margin-top:14px}
+  .lane{flex:1;background:#fff;border:1px solid #DCE5EE;border-radius:12px;padding:12px 14px}
+  .lane h3{font-size:14px;margin-bottom:8px}
+  .lane .steps{display:flex;flex-wrap:wrap;gap:5px}
+  .step{background:#1E3A5F;color:#fff;border-radius:7px;padding:5px 9px;font-size:12.5px}
+  .step.alt{background:#2F6FED}
+  .step.warm{background:#C2601E}
+  .foot{margin-top:14px;background:#1E3A5F;color:#fff;border-radius:12px;padding:14px 18px;font-size:15px;display:flex;justify-content:space-between;align-items:center}
+  .foot b{font-weight:700;color:#FFD79A}
+  .tagline{font-size:13px;color:#5b7288;margin-top:10px;text-align:center}
+  .two{display:flex;gap:14px;margin-top:14px}
+  .val{flex:1;background:#fff;border:1px solid #DCE5EE;border-radius:12px;padding:12px 14px}
+  .val b{font-size:13.5px}.val div{font-size:12.5px;color:#5b7288;margin-top:5px;line-height:1.6}
+</style></head><body>
+
+<h1>多人协同工作台 · 一张图看懂</h1>
+<div class="sub">让员工愿意记录 · 让问题有人解决 · 让经验能够留下 · 让组织每天更聪明</div>
+
+<!-- 输入层 -->
+<div class="row band">
+  <div class="card" style="flex:1.15">
+    <div class="t"><span class="dot"></span>员工：用最顺手的方式，随时说一句</div>
+    <div class="muted">不填日报 / 周报 / 月报 ✗　不用为了汇报多干活</div>
+    <div style="margin-top:7px">
+      <span class="chip">🎙 语音</span><span class="chip">🖼 图片</span><span class="chip">✍️ 文字</span>
+    </div>
+    <div class="muted" style="margin-top:8px">一句话说清五件事：<br>我正在做什么　·　做到哪了　·　卡在哪　·　学到什么　·　拿到什么资源</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="card" style="flex:1">
+    <div class="t"><span class="dot"></span>AI Agent 自动整理</div>
+    <div class="muted">语义理解 · 信息提取 · 分类 · 关联 · 推荐</div>
+    <div style="margin-top:7px">
+      <span class="chip alt" style="background:#EEF4FF">工作进度</span><span class="chip">问题</span>
+      <span class="chip">经验</span><span class="chip">商机</span><span class="chip">资源</span>
+    </div>
+    <div class="muted" style="margin-top:8px">并自动挂到 TA 正在负责的项目上</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="card" style="flex:.95;background:#FFF7EC;border-color:#F0CFA8">
+    <div class="t"><span class="dot" style="background:#C2601E"></span>飞书多维表格 = 唯一真源</div>
+    <div class="muted">一处录入，处处一致。<br>没有第二份"手工台账" ✗</div>
+  </div>
+</div>
+
+<!-- 四个闭环 -->
+<div class="row band">
+  <div class="lane"><h3>① 工作闭环</h3><div class="steps">
+    <span class="step">记录</span><span class="step">归类</span><span class="step">挂项目</span><span class="step alt">进度可见</span></div></div>
+  <div class="lane"><h3>② 问题闭环</h3><div class="steps">
+    <span class="step">登记</span><span class="step">查库</span><span class="step warm">升级</span><span class="step alt">确认解决</span></div></div>
+  <div class="lane"><h3>③ 经验闭环</h3><div class="steps">
+    <span class="step">解决</span><span class="step">沉淀</span><span class="step">入库</span><span class="step alt">复用</span></div></div>
+  <div class="lane"><h3>④ 成长闭环</h3><div class="steps">
+    <span class="step">每日复盘</span><span class="step">能力积累</span><span class="step alt">组织更聪明</span></div></div>
+</div>
+
+<!-- 计划 + 知识库 + 提醒 -->
+<div class="two">
+  <div class="val" style="flex:1.25">
+    <b>计划：三层来源，自动叠加、互不覆盖</b>
+    <div>
+      <span class="chip">个人自定</span><span class="chip">部门下达</span><span class="chip">公司下达</span><br>
+      每条带 <b>状态</b>（未开始 / 进行中 / 已完成）+ <b>起止日期</b>；派生关系用「<b>上级计划</b>」挂着<br>
+      日历上同一天格子里：既看到「部门要我做的」，也看到「我自己安排的」<br>
+      <b>可见范围分层</b>：员工＝自己＋本部门下达｜总监＝本部门｜分管领导＝全部<br>
+      员工可以<b>先定自己的计划</b>，不用等总监 ✗
+    </div>
+  </div>
+  <div class="val" style="flex:1.15">
+    <b>知识库：先查库里有没有</b>
+    <div>
+      初期入库：<span class="chip">历史项目</span><span class="chip">政策</span><span class="chip">经验</span>；后续靠每天的记录不断长<br>
+      <b>库里没有就明说「库里没有」</b> —— 绝不编、绝不拿外网搜索结果充数（内容真实是底线 ✗）<br>
+      无法解决 → 逐级升级：<b>部门总监 → 分管领导 → 更高层</b><br>
+      升级必须<b>带自己的解题思路</b>；直到员工自己确认「解决了」才算闭环
+    </div>
+  </div>
+  <div class="val" style="flex:.85">
+    <b>提醒：自己提醒自己</b>
+    <div>
+      提醒工作时间 · 提醒问题还没解决 · 提醒计划到点<br><br>
+      <b style="color:#C2601E">不是别人催，是自己提醒自己</b>
+    </div>
+  </div>
+</div>
+
+<!-- 价值 -->
+<div class="row band">
+  <div class="val"><b>员工每天获得</b><div>复盘与成长　·　工作变成自己的成长记录</div></div>
+  <div class="val"><b>管理者每天掌握</b><div>项目进度　·　组织问题　·　不用追着问</div></div>
+  <div class="val"><b>企业日积月累</b><div>经验网络　·　组织记忆　·　未来的资产</div></div>
+</div>
+
+<div class="foot">
+  <span>不是"员工每天多填一张表"，而是 —— 让每一个人的工作，都成为自己的成长记录</span>
+  <b>让每一天产生的信息，都成为企业未来的资产</b>
+</div>
+<div class="tagline">工作闭环 · 问题闭环 · 经验闭环 · 成长闭环 —— 四个循环同时转，组织才会变聪明</div>
+
+</body></html>

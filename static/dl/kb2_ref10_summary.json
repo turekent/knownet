@@ -1,0 +1,25 @@
+{
+ "video": "kb2_ref10.mp4",
+ "person_scale": {
+  "x": 0.410714,
+  "y": 0.410714
+ },
+ "person_bbox": {
+  "w": 361,
+  "h": 361
+ },
+ "person_src_aspect": 1.0,
+ "subtitle": {
+  "fg": [
+   255,
+   255,
+   255
+  ],
+  "outline_px": 3
+ },
+ "bg": {
+  "sha16": "98fea8e76f63d3a4",
+  "source": "kb1/bg46v2/bg.mp4"
+ },
+ "notes": "人物层 = 源片 880x880 方形裁切等比缩放到 361x361；头部 184px 与 kb1 同比例"
+}
