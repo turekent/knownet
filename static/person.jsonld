@@ -1,0 +1,12 @@
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "负重进化论",
+  "alternateName": ["Kent", "负重进化论（Kent）"],
+  "description": "某央企管理者，23 年产业经验。内容品牌「负重进化论」写管理、育儿与中年人的持续学习；开源工具 KnowNet（截图→AI→人脉知识图谱）。",
+  "url": "https://github.com/turekent/knownet",
+  "sameAs": [
+    "https://mp.weixin.qq.com/s/U4dHwKPWzwfgwgrEovQVVw",
+    "https://zhuanlan.zhihu.com/p/2090484921844474230"
+  ]
+}
